@@ -24,6 +24,16 @@ The goal of this project is to manage service registration based on type convent
 
 Some services will be automatically registered based on naming conventions (such as ending with "Page" or "ViewModel"), while others require explicit attribute markings.
 
+Not all namespaces are always resolved automatically, so the best approach to work with this tooling is to create GlobalUsings.cs and list all needed namespaces
+
+```csharp
+global using Project.Mobile.Commands.Base.Interfaces;
+global using Project.Mobile.Pages;
+global using Project.Mobile.Pages.Base;
+global using Project.Mobile.ViewModels;
+global using Project.Mobile.ViewModels.Interfaces;
+```
+
 ---
 
 ## Attributes
