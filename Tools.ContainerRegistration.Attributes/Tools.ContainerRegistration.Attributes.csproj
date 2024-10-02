@@ -6,6 +6,15 @@
         <Nullable>enable</Nullable>
         <RootNamespace>Tools.ContainerRegistration.Attributes</RootNamespace>
         <LangVersion>latest</LangVersion>
+        <Version>0.1.1</Version>
+        <Title>Tools.ContainerRegistration.Attributes</Title>
+        <Authors>Artur Malendowicz "Immons"</Authors>
+        <Description>Project contains service registration attributes</Description>
+        <Copyright>Immons</Copyright>
+        <PackageProjectUrl>https://github.com/Immons/Tools.ContainerRegistration</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/Immons/Tools.ContainerRegistration</RepositoryUrl>
+        <RepositoryType>Git</RepositoryType>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     </PropertyGroup>
 
 </Project>

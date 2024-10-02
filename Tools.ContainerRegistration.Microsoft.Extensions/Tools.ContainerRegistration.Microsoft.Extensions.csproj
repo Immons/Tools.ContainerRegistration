@@ -4,6 +4,15 @@
         <TargetFramework>netstandard2.0</TargetFramework>
         <Nullable>disable</Nullable>
         <LangVersion>latest</LangVersion>
+        <Version>0.1.1</Version>
+        <Title>Tools.ContainerRegistration.Microsoft.Extensions</Title>
+        <Authors>Artur Malendowicz "Immons"</Authors>
+        <Description>Microsoft IServiceCollection extension project for Tools.ContainerRegistration.Microsoft</Description>
+        <Copyright>Immons</Copyright>
+        <PackageProjectUrl>https://github.com/Immons/Tools.ContainerRegistration</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/Immons/Tools.ContainerRegistration</RepositoryUrl>
+        <RepositoryType>Git</RepositoryType>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     </PropertyGroup>
 
     <ItemGroup>

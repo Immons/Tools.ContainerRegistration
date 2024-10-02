@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="10.0.0" />
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+      <PackageReference Include="Tools.ContainerRegistration.Attributes" Version="0.1.1" />
+<!--        <PackageReference Include="Tools.ContainerRegistration.Autofac" Version="0.1.1" />-->
+<!--        <PackageReference Include="Tools.ContainerRegistration.Microsoft" Version="0.1.1" />-->
+      <PackageReference Include="Tools.ContainerRegistration.Microsoft.Extensions" Version="0.1.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Tools.ContainerRegistration.Autofac\Tools.ContainerRegistration.Autofac.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+        <ProjectReference Include="..\Tools.ContainerRegistration.Common\Tools.ContainerRegistration.Common.csproj" PrivateAssets="all"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <AdditionalFiles Include="ioc_config.json" />
+    </ItemGroup>
+
+</Project>

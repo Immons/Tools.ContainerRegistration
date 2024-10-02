@@ -3,7 +3,7 @@
   "profiles": {
     "Generators": {
       "commandName": "DebugRoslynComponent",
-      "targetProject": "../Virtuti.Endpoints/Virtuti.Endpoints.csproj"
+      "targetProject": "../Tools.ContainerRegistration.Sample/Tools.ContainerRegistration.Sample.csproj"
     }
   }
 }

@@ -1,0 +1,12 @@
+{
+        "InterfaceNamingConvention" : "I",
+        "ExcludedFromRegisteringAsConventionInterface" : [ 
+                "Page",
+                "Map"
+        ],
+        "RegisterAsSelf" : true,
+        "RegisterTypesEndingWith" : [
+                "Service",
+                "Map"
+        ]
+}

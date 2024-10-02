@@ -4,16 +4,22 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <Nullable>disable</Nullable>
     <LangVersion>latest</LangVersion>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Version>0.1.1</Version>
+    <Title>Tools.ContainerRegistration.Common</Title>
+    <Authors>Artur Malendowicz "Immons"</Authors>
+    <Description>Common project serving as base class for container generators</Description>
+    <Copyright>Immons</Copyright>
+    <PackageProjectUrl>https://github.com/Immons/Tools.ContainerRegistration</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Immons/Tools.ContainerRegistration</RepositoryUrl>
+    <RepositoryType>Git</RepositoryType>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 </PropertyGroup>
 
 <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4" />
     <PackageReference Include="System.Text.Json" Version="6.0.0" />
-</ItemGroup>
-
-<ItemGroup>
-    <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
 </ItemGroup>
 
 </Project>

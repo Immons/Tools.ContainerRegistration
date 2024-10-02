@@ -10,6 +10,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tools.ContainerRegistration
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tools.ContainerRegistration.Microsoft.Extensions", "Tools.ContainerRegistration.Microsoft.Extensions\Tools.ContainerRegistration.Microsoft.Extensions.csproj", "{1AED02EF-D99A-49BF-80A2-78E8B2F82980}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tools.ContainerRegistration.Sample", "Tools.ContainerRegistration.Sample\Tools.ContainerRegistration.Sample.csproj", "{7225BE51-4051-40CB-8A4C-1027573F18CD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,5 +38,9 @@ Global
 		{1AED02EF-D99A-49BF-80A2-78E8B2F82980}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1AED02EF-D99A-49BF-80A2-78E8B2F82980}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1AED02EF-D99A-49BF-80A2-78E8B2F82980}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7225BE51-4051-40CB-8A4C-1027573F18CD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7225BE51-4051-40CB-8A4C-1027573F18CD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7225BE51-4051-40CB-8A4C-1027573F18CD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7225BE51-4051-40CB-8A4C-1027573F18CD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
