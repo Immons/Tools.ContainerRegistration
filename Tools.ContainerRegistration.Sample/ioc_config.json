@@ -1,19 +1,19 @@
 {
-        "InterfaceNamingConvention" : "I",
-        "ExcludedFromRegisteringAsConventionInterface" : [ 
-                "Map",
-                "Page",
-                "ProfileViewModel",
-                "UserViewModel"
-        ],
-        "ExcludedFromRegisteringTypesEndingWith": [
-                "UserViewModel"
-        ],
         "RegisterAsSelf" : true,
-        "RegisterTypesEndingWith" : [
-                "Page",
-                "Service",
-                "Map",
-                "ViewModel"
+        "RegisterAsAllInheritedTypes" : true,
+        "RegisterAsDirectlyInheritedTypes" : true,
+        "RegisterInterfacesOnlyFromThatAssemblies" : [
+                "Tools.ContainerRegistration.Sample",
+                "Tools.ContainerRegistration.Sample.Common"
+        ],
+        "ExcludedFromRegisteringMatching": [
+                "Tools.ContainerRegistration.Sample.ViewModels.Base*",
+                "Tools.ContainerRegistration.Sample.Maps.Base.*"
+        ],
+        "RegisterTypesMatching" : [
+                "*Page*",
+                "*Service*",
+                "*Map*",
+                "Tools.ContainerRegistration.Sample.ViewModels.*"
         ]
 }

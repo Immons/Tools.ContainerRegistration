@@ -14,6 +14,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tools.ContainerRegistration
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tools.ContainerRegistration.Sample.Nuget", "Tools.ContainerRegistration.Sample.Nuget\Tools.ContainerRegistration.Sample.Nuget.csproj", "{89496118-C419-428B-95E2-126B72BAC8DB}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tools.ContainerRegistration.Sample.Common", "Tools.ContainerRegistration.Sample.Common\Tools.ContainerRegistration.Sample.Common.csproj", "{8663747A-6D4F-4ADB-A021-11A15112684C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -48,5 +50,9 @@ Global
 		{89496118-C419-428B-95E2-126B72BAC8DB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{89496118-C419-428B-95E2-126B72BAC8DB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{89496118-C419-428B-95E2-126B72BAC8DB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8663747A-6D4F-4ADB-A021-11A15112684C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8663747A-6D4F-4ADB-A021-11A15112684C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8663747A-6D4F-4ADB-A021-11A15112684C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8663747A-6D4F-4ADB-A021-11A15112684C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

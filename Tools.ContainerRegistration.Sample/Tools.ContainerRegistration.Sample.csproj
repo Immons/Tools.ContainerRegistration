@@ -8,6 +8,8 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Mapster" Version="7.4.1-pre01" />
+        <PackageReference Include="Mapster.Async" Version="2.0.1" />
       <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="10.0.0" />
       <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
 <!--      <PackageReference Include="Tools.ContainerRegistration.Attributes" Version="0.1.1" />-->
@@ -22,6 +24,7 @@
         <ProjectReference Include="..\Tools.ContainerRegistration.Microsoft.Extensions\Tools.ContainerRegistration.Microsoft.Extensions.csproj"/>
         <ProjectReference Include="..\Tools.ContainerRegistration.Common\Tools.ContainerRegistration.Common.csproj" OutputItemType="Analyzer"/>
         <ProjectReference Include="..\Tools.ContainerRegistration.Attributes\Tools.ContainerRegistration.Attributes.csproj" PrivateAssets="all"/>
+        <ProjectReference Include="..\Tools.ContainerRegistration.Sample.Common\Tools.ContainerRegistration.Sample.Common.csproj" />
     </ItemGroup>
 
     <ItemGroup>

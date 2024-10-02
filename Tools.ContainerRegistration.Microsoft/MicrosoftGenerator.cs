@@ -106,8 +106,8 @@ public class MicrosoftGenerator : IGenerator
     public GeneratedServiceRegistrationEntity Generate(ServiceRegistrationEntity serviceRegistrationEntity)
     {
         var registrationLine = new StringBuilder();
-        var typeName =
-            serviceRegistrationEntity.NamedTypeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        var typeName = serviceRegistrationEntity.NamedTypeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        var shortTypeName = serviceRegistrationEntity.NamedTypeSymbol.Name;
 
         var registeredAsSingletonYet = false;
         var registerAsSingleton = serviceRegistrationEntity.Scope == Scope.Singleton;
@@ -125,7 +125,8 @@ public class MicrosoftGenerator : IGenerator
 
         foreach (var registerAsInterface in serviceRegistrationEntity.RegisterAsInterfaces)
         {
-            if (registerAsInterface == serviceRegistrationEntity.NamedTypeSymbol.Name) continue;
+            if (registerAsInterface == shortTypeName ||
+                registerAsInterface == typeName) continue;
 
             if (serviceRegistrationEntity.Scope == Scope.Singleton)
             {

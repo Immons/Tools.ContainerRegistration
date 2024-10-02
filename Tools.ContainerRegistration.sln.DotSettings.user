@@ -6,6 +6,7 @@
   &lt;Assembly Path="/Users/immons/Projects/Tools.ContainerRegistration/Tools.ContainerRegistration.Autofac/bin/Release/netstandard2.0/Tools.ContainerRegistration.Autofac.dll" /&gt;
   &lt;Assembly Path="/Users/immons/Projects/Tools.ContainerRegistration/Tools.ContainerRegistration.Autofac/bin/Debug/netstandard2.0/Tools.ContainerRegistration.Common.dll" /&gt;
 &lt;/AssemblyExplorer&gt;</s:String>
-	<s:Boolean x:Key="/Default/UnloadedProject/UnloadedProjects/=7225be51_002D4051_002D40cb_002D8a4c_002D1027573f18cd_0023Tools_002EContainerRegistration_002ESample/@EntryIndexedValue">True</s:Boolean>
+	
+	<s:Boolean x:Key="/Default/UnloadedProject/UnloadedProjects/=89496118_002Dc419_002D428b_002D95e2_002D126b72bac8db_0023Tools_002EContainerRegistration_002ESample_002ENuget/@EntryIndexedValue">True</s:Boolean>
 	
 	</wpf:ResourceDictionary>

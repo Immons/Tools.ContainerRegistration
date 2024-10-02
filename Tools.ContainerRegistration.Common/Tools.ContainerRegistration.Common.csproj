@@ -5,7 +5,7 @@
     <Nullable>disable</Nullable>
     <LangVersion>latest</LangVersion>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>0.1.2</Version>
+    <Version>0.1.5</Version>
     <Title>Tools.ContainerRegistration.Common</Title>
     <Authors>Artur Malendowicz "Immons"</Authors>
     <Description>Common project serving as base class for container generators</Description>

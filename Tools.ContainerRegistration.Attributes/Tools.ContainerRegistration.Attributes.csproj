@@ -6,7 +6,7 @@
         <Nullable>enable</Nullable>
         <RootNamespace>Tools.ContainerRegistration.Attributes</RootNamespace>
         <LangVersion>latest</LangVersion>
-        <Version>0.1.2</Version>
+        <Version>0.1.5</Version>
         <Title>Tools.ContainerRegistration.Attributes</Title>
         <Authors>Artur Malendowicz "Immons"</Authors>
         <Description>Project contains service registration attributes</Description>

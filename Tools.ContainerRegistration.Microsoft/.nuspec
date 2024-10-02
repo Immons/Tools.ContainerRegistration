@@ -2,11 +2,11 @@
 <package>
     <metadata>
         <id>Tools.ContainerRegistration.Microsoft</id>
-        <version>0.1.2</version>
+        <version>0.1.5</version>
         <authors>Artur Malendowicz</authors>
         <description>Microsoft Dependency Injection (IServiceCollection) container registration source generator</description>
         <dependencies>
-            <dependency id="Tools.ContainerRegistration.Common" version="0.1.2" />
+            <dependency id="Tools.ContainerRegistration.Common" version="0.1.5" />
         </dependencies>
     </metadata>
     <files>

@@ -15,14 +15,12 @@ public static class GlobalSettings
     public const string ManualRegistrationAttribute = nameof(ManualRegistrationAttribute);
     public const string ServiceRegistrationAttribute = nameof(ServiceRegistrationAttribute);
     public const string FactoryRegistrationAttribute = nameof(FactoryRegistrationAttribute);
-    
-    public static string GetInterfaceNamingConvention(string typeName) => $"{InterfaceNamingConvention}{typeName}";
-    public static string[] ExcludedFromRegisteringAsConventionInterface { get; private set; } = new[] { "Page" };
-    public static string[] ExcludedFromRegisteringTypesEndingWith { get; private set; } = Array.Empty<string>();
-    
-    public static string[] RegisterTypesEndingWith { get; private set; } = new[] { "Service", "Map", "Factory", "Repository", "Action", "CommandBuilder", "Page", "ViewModel"};
-    public static string InterfaceNamingConvention { get; private set; } = "I";
+    public static string[] RegisterInterfacesOnlyFromThatAssemblies { get; private set; } = Array.Empty<string>();
+    public static string[] ExcludedFromRegisteringMatching { get; private set; } = Array.Empty<string>();
+    public static string[] RegisterTypesMatching { get; private set; } = new[] { "Service", "Map", "Factory", "Repository", "Action", "CommandBuilder", "Page", "ViewModel"};
     public static bool RegisterAsSelf { get; private set; } = true;
+    public static bool RegisterAsAllInheritedTypes { get; private set; } = true;
+    public static bool RegisterAsDirectlyInheritedTypes { get; private set; } = true;
     
     public static void LoadSettings(GeneratorExecutionContext context)
     {
@@ -31,11 +29,13 @@ public static class GlobalSettings
         {
             var text = additionalFile.GetText(context.CancellationToken)?.ToString();
             var config = JsonSerializer.Deserialize<IocConfig>(text);
-            ExcludedFromRegisteringAsConventionInterface = config?.ExcludedFromRegisteringAsConventionInterface ?? ExcludedFromRegisteringAsConventionInterface;
-            RegisterTypesEndingWith = config?.RegisterTypesEndingWith ?? RegisterTypesEndingWith;
-            InterfaceNamingConvention = config?.InterfaceNamingConvention ?? InterfaceNamingConvention;
-            ExcludedFromRegisteringTypesEndingWith = config?.ExcludedFromRegisteringTypesEndingWith ?? ExcludedFromRegisteringTypesEndingWith;
+            RegisterTypesMatching = config?.RegisterTypesMatching ?? RegisterTypesMatching;
+            ExcludedFromRegisteringMatching = config?.ExcludedFromRegisteringMatching ?? ExcludedFromRegisteringMatching;
             RegisterAsSelf = config?.RegisterAsSelf ?? RegisterAsSelf;
+            RegisterAsAllInheritedTypes = config?.RegisterAsAllInheritedTypes ?? RegisterAsAllInheritedTypes;
+            RegisterAsDirectlyInheritedTypes = config?.RegisterAsDirectlyInheritedTypes ?? RegisterAsDirectlyInheritedTypes;
+            RegisterInterfacesOnlyFromThatAssemblies = config?.RegisterInterfacesOnlyFromThatAssemblies ?? RegisterInterfacesOnlyFromThatAssemblies;
+            
         }
     }
 }

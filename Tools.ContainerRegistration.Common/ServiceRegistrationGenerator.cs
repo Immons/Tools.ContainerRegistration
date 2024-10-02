@@ -32,17 +32,27 @@ public abstract class ServiceRegistrationGenerator : ISourceGenerator
     private IEnumerable<INamedTypeSymbol> DiscoverTypesForRegistration(Compilation compilation)
     {
         var types = new List<INamedTypeSymbol>();
+        
+        bool MatchesPattern(string name, string pattern)
+        {
+            var regexPattern = "^" + System.Text.RegularExpressions.Regex.Escape(pattern).Replace("\\*", ".*") + "$";
+            return System.Text.RegularExpressions.Regex.IsMatch(name, regexPattern);
+        }
 
         bool ShouldRegisterType(INamedTypeSymbol symbol)
         {
+            if (symbol.IsStatic) return false;
+            
             var hasManualRegistration = symbol.GetAttributes().Any(
                 a => a.AttributeClass.Name == GlobalSettings.ManualRegistrationAttribute);
             if (hasManualRegistration) return false;
             
             var shouldRegisterBasedOnConventionName =
-                GlobalSettings.RegisterTypesEndingWith.Any(name => symbol.Name.EndsWith(name));
+                GlobalSettings.RegisterTypesMatching.Any(pattern => MatchesPattern(symbol.ToDisplayString(), pattern));
 
-            var isExcludedBasedOnConvention = GlobalSettings.ExcludedFromRegisteringTypesEndingWith.Any(name => symbol.Name.EndsWith(name));
+            // Check if the type name matches any of the "ExcludedFromRegisteringMatching" patterns
+            var isExcludedBasedOnConvention =
+                GlobalSettings.ExcludedFromRegisteringMatching.Any(pattern => MatchesPattern(symbol.ToDisplayString(), pattern));
 
             var shouldRegisterBasedOnAttributes = symbol.GetAttributes().Any(
                 a => a.AttributeClass.Name == GlobalSettings.SingletonAttribute ||
@@ -172,8 +182,31 @@ public abstract class ServiceRegistrationGenerator : ISourceGenerator
         }
         else
         {
-            if (!GlobalSettings.ExcludedFromRegisteringAsConventionInterface.Any(suffix => type.Name.EndsWith(suffix)))
-                serviceRegistrationEntity.RegisterAsInterfaces.Add(type.IsAbstract ? type.Name : GlobalSettings.GetInterfaceNamingConvention(type.Name));
+            if (GlobalSettings.RegisterAsAllInheritedTypes)
+            {
+                // Register all inherited interfaces, but only those from the same assembly
+                serviceRegistrationEntity.RegisterAsInterfaces.AddRange(
+                    type.AllInterfaces
+                        .Where(SymbolBelongsToAllowedAssemblies)
+                        .Select(t => t.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
+                );
+            }
+            else if (GlobalSettings.RegisterAsDirectlyInheritedTypes)
+            {
+                // Register only directly implemented interfaces, but only those from the same assembly
+                serviceRegistrationEntity.RegisterAsInterfaces.AddRange(
+                    type.Interfaces
+                        .Where(SymbolBelongsToAllowedAssemblies)
+                        .Select(t => t.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
+                );
+            }
+
+            bool SymbolBelongsToAllowedAssemblies(INamedTypeSymbol symbol)
+            {
+                if (!GlobalSettings.RegisterInterfacesOnlyFromThatAssemblies.Any()) return true;
+                var assemblyName = symbol.ContainingAssembly.Name;
+                return GlobalSettings.RegisterInterfacesOnlyFromThatAssemblies.Contains(assemblyName);
+            }
         }
     }
 

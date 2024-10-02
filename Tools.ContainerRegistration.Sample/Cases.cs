@@ -33,41 +33,7 @@ public interface ITestUserPage
 {
 }
 
-/// <summary>
-/// will not be registered because it exist in ioc_config.json in "ExcludedFromRegisteringTypesEndingWith"
-/// </summary>
-public class EnemyUserViewModel
-{
-}
 
-/// <summary>
-/// will be registered although it exist in in ioc_config.json in "ExcludedFromRegisteringTypesEndingWith",
-/// because it contains attribute
-/// It will also be registered as IBaseUserViewModel and IFriendsViewModel due to ServiceRegistration attribute
-/// </summary>
-[Singleton]
-[ServiceRegistration([typeof(IBaseUserViewModel), typeof(IFriendsViewModel)])]
-public class FriendlyUserViewModel : IBaseUserViewModel, IFriendsViewModel
-{
-}
-
-public interface IBaseUserViewModel
-{
-}
-
-public interface IFriendsViewModel
-{
-}
-
-//will be registered as ProfileViewModel because exist in ioc_config.json in "RegisterTypesEndingWith"
-//but won't be registered as IProfileViewModel because it also exists in "ExcludedFromRegisteringAsConventionInterface"
-public class ProfileViewModel : IProfileViewModel
-{
-}
-
-public interface IProfileViewModel
-{
-}
 
 /// <summary>
 /// Factory should accept 2 parameters - Type and ServiceProvider where ServiceProvider can be either
@@ -141,5 +107,18 @@ public interface ITestService2
 }
 
 public interface ITestService3
+{
+}
+
+public class InheritingTestService : IInheritingInterface
+{
+    
+}
+
+public interface IInheritingInterface : IBaseInheritingInterface
+{
+}
+
+public interface IBaseInheritingInterface
 {
 }
