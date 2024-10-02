@@ -17,11 +17,12 @@ This project demonstrates how to register various services using Autofac or Micr
 6. [Generation output](#generation-output)
    - [Autofac](#autofac)
    - [Microsoft DI](#microsoft-dependency-injection)
+   - [GeneratedServiceRegistration namespace](#generatedserviceregistration-namespace)
 ---
 
 ## Overview
 
-The goal of this project is to manage service registration based on type conventions, interfaces, and custom attributes. The `ioc_config.json` file defines what types should be automatically registered, while the attributes fine-tune how specific types and interfaces should be treated.
+The goal of this project is to manage service registration based on type conventions, interfaces, and custom attributes in **BUILD TIME** in opposite to registration provided as assembly sweep using reflection which is time consuming. The `ioc_config.json` file defines what types should be automatically registered, while the attributes fine-tune how specific types and interfaces should be treated.
 
 Some services will be automatically registered based on naming conventions (such as ending with "Page" or "ViewModel"), while others require explicit attribute markings.
 
@@ -113,6 +114,8 @@ public interface IHelloWorldService
 ## Registration Rules
 
 ### Based on `ioc_config.json`
+
+`ioc_config.json` file should have build action set to `AdditionalFiles` and exist in project root directory.
 
 - **RegisterTypesEndingWith:** Automatically registers types whose names end with specified suffixes, such as "Page" or "ViewModel".
 - **ExcludedFromRegisteringTypesEndingWith:** Excludes types from registration even if they match the suffix rules.
@@ -286,6 +289,12 @@ ServiceCollection_GeneratedServiceRegistration.AfterContainerBuilt(provider);
 
 take a look that it also generates **void AfterContainerBuilt(IServiceProvider provider)** method.
 This method is used as way to AutoActivate services for Microsoft DI.
+
+### GeneratedServiceRegistration namespace
+
+Library should be added to each project that you want `GeneratedServiceRegistration.g.cs` file to be generated.
+When added to for example `Project.Mobile.Common` it will be accessible through full name: `Project.Mobile.Common.Autofac_GeneratedServiceRegistration`,
+when added to `Project.Endpoints` another class will be generated and be accessible through `Project.Endpoints.Autofac_GeneratedServiceRegistration~~~~`
 
 ---
 
