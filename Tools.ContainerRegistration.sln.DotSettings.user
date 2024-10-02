@@ -5,4 +5,7 @@
 	<s:String x:Key="/Default/Environment/AssemblyExplorer/XmlDocument/@EntryValue">&lt;AssemblyExplorer&gt;
   &lt;Assembly Path="/Users/immons/Projects/Tools.ContainerRegistration/Tools.ContainerRegistration.Autofac/bin/Release/netstandard2.0/Tools.ContainerRegistration.Autofac.dll" /&gt;
   &lt;Assembly Path="/Users/immons/Projects/Tools.ContainerRegistration/Tools.ContainerRegistration.Autofac/bin/Debug/netstandard2.0/Tools.ContainerRegistration.Common.dll" /&gt;
-&lt;/AssemblyExplorer&gt;</s:String></wpf:ResourceDictionary>
+&lt;/AssemblyExplorer&gt;</s:String>
+	<s:Boolean x:Key="/Default/UnloadedProject/UnloadedProjects/=7225be51_002D4051_002D40cb_002D8a4c_002D1027573f18cd_0023Tools_002EContainerRegistration_002ESample/@EntryIndexedValue">True</s:Boolean>
+	
+	</wpf:ResourceDictionary>

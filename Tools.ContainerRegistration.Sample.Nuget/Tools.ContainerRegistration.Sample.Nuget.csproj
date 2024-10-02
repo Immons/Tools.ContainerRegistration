@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <AdditionalFiles Include="ioc_config.json" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="10.0.0" />
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+      <PackageReference Include="Tools.ContainerRegistration.Attributes" Version="0.1.2" />
+      <PackageReference Include="Tools.ContainerRegistration.Autofac" Version="0.1.2" />
+      <PackageReference Include="Tools.ContainerRegistration.Microsoft" Version="0.1.2" />
+      <PackageReference Include="Tools.ContainerRegistration.Microsoft.Extensions" Version="0.1.2" />
+    </ItemGroup>
+
+</Project>

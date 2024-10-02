@@ -294,7 +294,7 @@ This method is used as way to AutoActivate services for Microsoft DI.
 
 Library should be added to each project that you want `GeneratedServiceRegistration.g.cs` file to be generated.
 When added to for example `Project.Mobile.Common` it will be accessible through full name: `Project.Mobile.Common.Autofac_GeneratedServiceRegistration`,
-when added to `Project.Endpoints` another class will be generated and be accessible through `Project.Endpoints.Autofac_GeneratedServiceRegistration~~~~`
+when added to `Project.Endpoints` another class will be generated and be accessible through `Project.Endpoints.Autofac_GeneratedServiceRegistration`
 
 ---
 

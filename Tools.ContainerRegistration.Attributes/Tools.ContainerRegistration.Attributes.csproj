@@ -6,7 +6,7 @@
         <Nullable>enable</Nullable>
         <RootNamespace>Tools.ContainerRegistration.Attributes</RootNamespace>
         <LangVersion>latest</LangVersion>
-        <Version>0.1.1</Version>
+        <Version>0.1.2</Version>
         <Title>Tools.ContainerRegistration.Attributes</Title>
         <Authors>Artur Malendowicz "Immons"</Authors>
         <Description>Project contains service registration attributes</Description>
@@ -17,4 +17,14 @@
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     </PropertyGroup>
 
+    <Target Name="CopyNuGetPackage" AfterTargets="Pack">
+        <PropertyGroup>
+            <Solution>$(MSBuildProjectDirectory)..\..\</Solution>
+            <NugetOutputDirectory>$(Solution)nugets</NugetOutputDirectory>
+            <PackageOutputPath>$(OutputPath)..\</PackageOutputPath>
+            <PackedNuGetFile>$(PackageOutputPath)$(PackageId).$(PackageVersion).nupkg</PackedNuGetFile>
+        </PropertyGroup>
+        <MakeDir Directories="$(NugetOutputDirectory)" />
+        <Copy SourceFiles="$(PackedNuGetFile)" DestinationFolder="$(NugetOutputDirectory)" />
+    </Target>
 </Project>

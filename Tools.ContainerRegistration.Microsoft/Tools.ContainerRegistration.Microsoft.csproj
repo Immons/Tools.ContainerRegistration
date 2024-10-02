@@ -7,7 +7,7 @@
         <CompilerGeneratedFilesOutputPath>Generated</CompilerGeneratedFilesOutputPath>
         <IsRoslynComponent>true</IsRoslynComponent>
         <LangVersion>latest</LangVersion>
-        <Version>0.1.1</Version>
+        <Version>0.1.2</Version>
         <Title>Tools.ContainerRegistration.Microsoft</Title>
         <Authors>Artur Malendowicz "Immons"</Authors>
         <Description>Generator for Microsoft IServiceCollection based on Tools.ContainerRegistration.Common</Description>
@@ -38,4 +38,14 @@
         <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
     </ItemGroup>
 
+    <Target Name="CopyNuGetPackage" AfterTargets="Pack">
+        <PropertyGroup>
+            <Solution>$(MSBuildProjectDirectory)..\..\</Solution>
+            <NugetOutputDirectory>$(Solution)nugets</NugetOutputDirectory>
+            <PackageOutputPath>$(OutputPath)..\</PackageOutputPath>
+            <PackedNuGetFile>$(PackageOutputPath)$(PackageId).$(PackageVersion).nupkg</PackedNuGetFile>
+        </PropertyGroup>
+        <MakeDir Directories="$(NugetOutputDirectory)" />
+        <Copy SourceFiles="$(PackedNuGetFile)" DestinationFolder="$(NugetOutputDirectory)" />
+    </Target>
 </Project>

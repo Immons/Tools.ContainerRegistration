@@ -8,7 +8,7 @@
         <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
         <IsRoslynComponent>true</IsRoslynComponent>
         <LangVersion>latest</LangVersion>
-        <Version>0.1.1</Version>
+        <Version>0.1.2</Version>
         <Title>Tools.ContainerRegistration.Autofac</Title>
         <Authors>Artur Malendowicz "Immons"</Authors>
         <Description>Generator for Autofac based on Tools.ContainerRegistration.Common</Description>
@@ -33,4 +33,14 @@
       <ProjectReference Include="..\Tools.ContainerRegistration.Common\Tools.ContainerRegistration.Common.csproj"/>
     </ItemGroup>
 
+    <Target Name="CopyNuGetPackage" AfterTargets="Pack">
+        <PropertyGroup>
+            <Solution>$(MSBuildProjectDirectory)..\..\</Solution>
+            <NugetOutputDirectory>$(Solution)nugets</NugetOutputDirectory>
+            <PackageOutputPath>$(OutputPath)..\</PackageOutputPath>
+            <PackedNuGetFile>$(PackageOutputPath)$(PackageId).$(PackageVersion).nupkg</PackedNuGetFile>
+        </PropertyGroup>
+        <MakeDir Directories="$(NugetOutputDirectory)" />
+        <Copy SourceFiles="$(PackedNuGetFile)" DestinationFolder="$(NugetOutputDirectory)" />
+    </Target>
 </Project>

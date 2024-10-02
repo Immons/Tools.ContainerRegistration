@@ -5,7 +5,7 @@
     <Nullable>disable</Nullable>
     <LangVersion>latest</LangVersion>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>0.1.1</Version>
+    <Version>0.1.2</Version>
     <Title>Tools.ContainerRegistration.Common</Title>
     <Authors>Artur Malendowicz "Immons"</Authors>
     <Description>Common project serving as base class for container generators</Description>
@@ -26,4 +26,14 @@
         <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
     </ItemGroup>
 
+    <Target Name="CopyNuGetPackage" AfterTargets="Pack">
+        <PropertyGroup>
+            <Solution>$(MSBuildProjectDirectory)..\..\</Solution>
+            <NugetOutputDirectory>$(Solution)nugets</NugetOutputDirectory>
+            <PackageOutputPath>$(OutputPath)..\</PackageOutputPath>
+            <PackedNuGetFile>$(PackageOutputPath)$(PackageId).$(PackageVersion).nupkg</PackedNuGetFile>
+        </PropertyGroup>
+        <MakeDir Directories="$(NugetOutputDirectory)" />
+        <Copy SourceFiles="$(PackedNuGetFile)" DestinationFolder="$(NugetOutputDirectory)" />
+    </Target>
 </Project>

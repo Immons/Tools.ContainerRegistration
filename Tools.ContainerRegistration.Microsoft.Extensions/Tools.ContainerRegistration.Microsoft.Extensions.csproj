@@ -4,7 +4,7 @@
         <TargetFramework>netstandard2.0</TargetFramework>
         <Nullable>disable</Nullable>
         <LangVersion>latest</LangVersion>
-        <Version>0.1.1</Version>
+        <Version>0.1.2</Version>
         <Title>Tools.ContainerRegistration.Microsoft.Extensions</Title>
         <Authors>Artur Malendowicz "Immons"</Authors>
         <Description>Microsoft IServiceCollection extension project for Tools.ContainerRegistration.Microsoft</Description>
@@ -19,4 +19,14 @@
       <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
     </ItemGroup>
 
+    <Target Name="CopyNuGetPackage" AfterTargets="Pack">
+        <PropertyGroup>
+            <Solution>$(MSBuildProjectDirectory)..\..\</Solution>
+            <NugetOutputDirectory>$(Solution)nugets</NugetOutputDirectory>
+            <PackageOutputPath>$(OutputPath)..\</PackageOutputPath>
+            <PackedNuGetFile>$(PackageOutputPath)$(PackageId).$(PackageVersion).nupkg</PackedNuGetFile>
+        </PropertyGroup>
+        <MakeDir Directories="$(NugetOutputDirectory)" />
+        <Copy SourceFiles="$(PackedNuGetFile)" DestinationFolder="$(NugetOutputDirectory)" />
+    </Target>
 </Project>
