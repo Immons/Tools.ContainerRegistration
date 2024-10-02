@@ -9,7 +9,7 @@ public class AutofacGenerator : IGenerator
 {
     public string Name => "Autofac";
     public string ProviderType => "IContainerContext";
-    public string ContainerType => $"ContainerBuilder";
+    public string ContainerType => "ContainerBuilder";
     public string Namespace => "Autofac";
     
     public ServiceRegistration GetServiceRegistration() => new AutofacServiceRegistration();

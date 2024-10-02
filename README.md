@@ -12,10 +12,11 @@ This project demonstrates how to register various services using Autofac or Micr
     - [ServiceRegistration](#serviceregistration)
     - [FactoryRegistration](#factoryregistration)
 3. [Service Factory](#service-factory)
-4. [Usage of Timers](#usage-of-timers)
-5. [Registration Rules](#registration-rules)
-6. [Examples](#examples)
-
+4. [Registration Rules](#registration-rules)
+5. [Examples](#examples)
+6. [Generation output](#generation-output)
+   - [Autofac](#autofac)
+   - [Microsoft DI](#microsoft-dependency-injection)
 ---
 
 ## Overview
@@ -212,6 +213,79 @@ public class TestUserPage : ITestUserPage
 {
 }
 ```
+
+---
+
+### Generation Output
+
+### Autofac
+When using **Autofac**, library will create for example such class:
+
+```csharp
+namespace Tools.ContainerRegistration.Sample;
+
+public static class Autofac_GeneratedServiceRegistration
+{
+    public static void RegisterServices(ContainerBuilder builder)
+    {
+         builder.RegisterType<global::Tools.ContainerRegistration.Sample.TestPage>().AsSelf().SingleInstance();
+         builder.RegisterType<global::Tools.ContainerRegistration.Sample.FriendlyUserViewModel>().As<Tools.ContainerRegistration.Sample.IBaseUserViewModel>().As<Tools.ContainerRegistration.Sample.IFriendsViewModel>().AsSelf().SingleInstance();
+         builder.RegisterType<global::Tools.ContainerRegistration.Sample.ProfileViewModel>().AsSelf();
+         builder.RegisterType<global::Tools.ContainerRegistration.Sample.TestService>().As<Tools.ContainerRegistration.Sample.ITestService>().As<Tools.ContainerRegistration.Sample.ITestService2>().AsSelf().SingleInstance().AutoActivate();
+         builder.Register(context => Tools.ContainerRegistration.Sample.HelloWorldServiceFactory.CreateHelloWorldService(typeof(global::Tools.ContainerRegistration.Sample.IHelloWorldService), context)).As<IHelloWorldService>().AsSelf().SingleInstance().AutoActivate();
+    }
+}
+```
+
+then you can use it when initializing your container that way:
+
+```csharp
+var containerBuilder = new ContainerBuilder();
+Autofac_GeneratedServiceRegistration.RegisterServices(containerBuilder);
+containerBuilder.Build();
+```
+
+### Microsoft Dependency Injection
+
+When using **Microsoft Dependency Injection**, library will create for example such class:
+
+```csharp
+namespace Tools.ContainerRegistration.Sample;
+
+public static class ServiceCollection_GeneratedServiceRegistration
+{
+    public static void RegisterServices(IServiceCollection builder)
+    {
+         builder.AddSingleton<global::Tools.ContainerRegistration.Sample.TestPage>();
+         Tools.ContainerRegistration.Microsoft.Extensions.ServiceCollectionExtension.ReUseSingleton<global::Tools.ContainerRegistration.Sample.FriendlyUserViewModel, Tools.ContainerRegistration.Sample.IBaseUserViewModel>(builder);
+         Tools.ContainerRegistration.Microsoft.Extensions.ServiceCollectionExtension.ReUseSingleton<global::Tools.ContainerRegistration.Sample.FriendlyUserViewModel, Tools.ContainerRegistration.Sample.IFriendsViewModel>(builder);
+         builder.AddSingleton<global::Tools.ContainerRegistration.Sample.FriendlyUserViewModel>();
+         builder.AddTransient<global::Tools.ContainerRegistration.Sample.ProfileViewModel>();
+         Tools.ContainerRegistration.Microsoft.Extensions.ServiceCollectionExtension.ReUseSingleton<global::Tools.ContainerRegistration.Sample.TestService, Tools.ContainerRegistration.Sample.ITestService>(builder);
+         Tools.ContainerRegistration.Microsoft.Extensions.ServiceCollectionExtension.ReUseSingleton<global::Tools.ContainerRegistration.Sample.TestService, Tools.ContainerRegistration.Sample.ITestService2>(builder);
+         builder.AddSingleton<global::Tools.ContainerRegistration.Sample.TestService>();
+         builder.AddSingleton(typeof(global::Tools.ContainerRegistration.Sample.IHelloWorldService), provider => Tools.ContainerRegistration.Sample.HelloWorldServiceFactory.CreateHelloWorldService(typeof(global::Tools.ContainerRegistration.Sample.IHelloWorldService), provider));
+    }
+
+    public static void AfterContainerBuilt(IServiceProvider provider)
+    {
+         provider.GetRequiredService<TestService>();
+         provider.GetRequiredService<IHelloWorldService>();
+    }
+}
+```
+
+then you can use it that way:
+
+```csharp
+var collection = new ServiceCollection();
+ServiceCollection_GeneratedServiceRegistration.RegisterServices(collection);
+var provider = collection.BuildServiceProvider();
+ServiceCollection_GeneratedServiceRegistration.AfterContainerBuilt(provider);
+```
+
+take a look that it also generates **void AfterContainerBuilt(IServiceProvider provider)** method.
+This method is used as way to AutoActivate services for Microsoft DI.
 
 ---
 

@@ -3,6 +3,7 @@ using System.Text;
 using Microsoft.CodeAnalysis;
 using Tools.ContainerRegistration.Common.Generators.Interfaces;
 using Tools.ContainerRegistration.Common.Models;
+using Tools.ContainerRegistration.Microsoft.Models;
 
 namespace Tools.ContainerRegistration.Microsoft;
 
@@ -10,7 +11,7 @@ public class MicrosoftGenerator : IGenerator
 {
     public string Name => "ServiceCollection";
     public string ProviderType => "IServiceProvider";
-    public string ContainerType => $"IServiceCollection";
+    public string ContainerType => "IServiceCollection";
     public string Namespace => "Microsoft.Extensions.DependencyInjection";
     
     public ServiceRegistration GetServiceRegistration() => new MicrosoftServiceRegistration();
@@ -121,18 +122,6 @@ public class MicrosoftGenerator : IGenerator
                     typeName,
                     serviceRegistrationEntity.Scope));
         }
-        else
-        {
-            // if (registerAsSingleton)
-            // {
-            //     registeredAsSingletonYet = registerAsSingleton;
-            //     registrationLine.AppendLine(GenerateSingleInstance(typeName));
-            // }
-            // else if (registerAsScoped)
-            // {
-            //     registrationLine.AppendLine(GenerateScopedInstance(typeName));
-            // }
-        }
 
         foreach (var registerAsInterface in serviceRegistrationEntity.RegisterAsInterfaces)
         {
@@ -164,9 +153,4 @@ public class MicrosoftGenerator : IGenerator
         };
         return toReturn;
     }
-}
-
-public class MicrosoftGeneratedServiceRegistrationEntity : GeneratedServiceRegistrationEntity
-{
-    public string AutoActivate { get; set; }
 }

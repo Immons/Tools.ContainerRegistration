@@ -1,6 +1,7 @@
 using System.Linq;
 using Tools.ContainerRegistration.Common.Generators.Interfaces;
 using Tools.ContainerRegistration.Common.Models;
+using Tools.ContainerRegistration.Microsoft.Models;
 
 namespace Tools.ContainerRegistration.Microsoft;
 

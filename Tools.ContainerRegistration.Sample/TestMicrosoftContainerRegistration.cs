@@ -8,7 +8,7 @@ public static class Program
     static void Main(string[] args)
     {
         TestMicrosoftContainerRegistration();
-        // TestAutofacContainerRegistration();
+        TestAutofacContainerRegistration();
 
         Console.ReadKey();
     }
