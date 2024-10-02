@@ -151,6 +151,18 @@ public class FriendlyUserViewModel : IBaseUserViewModel, IFriendsViewModel
 
 ```csharp
 
+[FactoryRegistration("Tools.ContainerRegistration.Sample.HelloWorldServiceFactory.CreateHelloWorldService")]
+[Singleton(true)]
+public interface IHelloWorldService
+{
+    void SayHello();
+}
+
+```
+
+where factory and implementation is
+
+```csharp
 namespace Tools.ContainerRegistration.Sample;
 
 public static class HelloWorldServiceFactory
@@ -159,12 +171,24 @@ public static class HelloWorldServiceFactory
     public static object CreateHelloWorldService(Type typeToCreate, IComponentContext provider) => new HelloWorldService(CultureInfo.CurrentUICulture);
 }
 
-[FactoryRegistration("Tools.ContainerRegistration.Sample.HelloWorldServiceFactory.CreateHelloWorldService")]
-[Singleton(true)]
-public interface IHelloWorldService
+[ManualRegistration]
+public class HelloWorldService : IHelloWorldService
 {
-    void SayHello();
+    private readonly CultureInfo _currentCulture;
+
+    public HelloWorldService(
+        CultureInfo currentCulture)
+    {
+        _currentCulture = currentCulture;
+        SayHello();
+    }
+
+    public void SayHello()
+    {
+        Console.WriteLine($"I would like to say Hello World in {_currentCulture.EnglishName}, but I don't know it!");
+    }
 }
+
 ```
 
 ### Manual Registration
@@ -180,4 +204,4 @@ public class TestUserPage : ITestUserPage
 
 ---
 
-This concludes the summary of the service registration based on conventions and attributes for the `Tools.ContainerRegistration.Sample` project. For further details, refer to the `ioc_config.json` file and attribute-based configurations in the source code.
+For further details, refer to the `ioc_config.json` file and attribute-based configurations in the source code.
