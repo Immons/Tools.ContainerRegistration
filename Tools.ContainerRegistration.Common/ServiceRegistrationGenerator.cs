@@ -33,6 +33,25 @@ public abstract class ServiceRegistrationGenerator : ISourceGenerator
     {
         var types = new List<INamedTypeSymbol>();
 
+        bool ShouldRegisterType(INamedTypeSymbol symbol)
+        {
+            var hasManualRegistration = symbol.GetAttributes().Any(
+                a => a.AttributeClass.Name == GlobalSettings.ManualRegistrationAttribute);
+            if (hasManualRegistration) return false;
+            
+            var shouldRegisterBasedOnConventionName =
+                GlobalSettings.RegisterTypesEndingWith.Any(name => symbol.Name.EndsWith(name));
+
+            var isExcludedBasedOnConvention = GlobalSettings.ExcludedFromRegisteringTypesEndingWith.Any(name => symbol.Name.EndsWith(name));
+
+            var shouldRegisterBasedOnAttributes = symbol.GetAttributes().Any(
+                a => a.AttributeClass.Name == GlobalSettings.SingletonAttribute ||
+                     a.AttributeClass.Name == GlobalSettings.ScopedAttribute ||
+                     a.AttributeClass.Name == GlobalSettings.ServiceRegistrationAttribute);
+            
+            return shouldRegisterBasedOnAttributes || (shouldRegisterBasedOnConventionName && !isExcludedBasedOnConvention);
+        }
+
         foreach (var syntaxTree in compilation.SyntaxTrees)
         {
             var semanticModel = compilation.GetSemanticModel(syntaxTree);
@@ -46,12 +65,8 @@ public abstract class ServiceRegistrationGenerator : ISourceGenerator
                 if (symbol == null)
                     continue;
 
-                if (GlobalSettings.RegisterTypesEndingWith.Any(name => symbol.Name.EndsWith(name) ||
-                                                                       symbol.GetAttributes().Any(a => a.AttributeClass.Name == GlobalSettings.ServiceRegistrationAttribute)) &&
-                    !symbol.GetAttributes().Any(a => GlobalSettings.AttributesToExclude.Contains(a.AttributeClass.Name)))
-                {
+                if (ShouldRegisterType(symbol))
                     types.Add(symbol);
-                }
             }
             
             foreach (var interfaceDeclaration in interfaceDeclarations)
@@ -60,12 +75,8 @@ public abstract class ServiceRegistrationGenerator : ISourceGenerator
                 if (symbol == null)
                     continue;
 
-                if ((GlobalSettings.RegisterTypesEndingWith.Any(name => symbol.Name.EndsWith(name)||
-                                                                        symbol.GetAttributes().Any(a => a.AttributeClass.Name == GlobalSettings.ServiceRegistrationAttribute))) &&
-                    !symbol.GetAttributes().Any(a => GlobalSettings.AttributesToExclude.Contains(a.AttributeClass.Name)))
-                {
+                if (ShouldRegisterType(symbol))
                     types.Add(symbol);
-                }
             }
         }
         return types;
@@ -76,23 +87,14 @@ public abstract class ServiceRegistrationGenerator : ISourceGenerator
         List<INamedTypeSymbol> typesToRegister)
     {
         var requiredNamespaces = CollectRequiredNamespaces(typesToRegister);
-
-        var sb = new StringBuilder();
-
-        foreach (var ns in requiredNamespaces)
-        {
-            sb.AppendLine($"using {ns};");
-        }
-
         
-        sb.AppendLine($"using {Generator.GetNamespace()};");
-        sb.AppendLine();
-        sb.AppendLine($"namespace {assemblyName};");
-        sb.AppendLine();
-        sb.AppendLine($"public static class {Generator.Name}_GeneratedServiceRegistration");
-        sb.AppendLine("{");
-        sb.AppendLine($"    public static void RegisterServices({Generator.GetContainerType()} builder)");
-        sb.AppendLine("    {");
+        var serviceRegistration = Generator.GetServiceRegistration();
+        serviceRegistration.Usings.Add(Generator.Namespace);
+        serviceRegistration.Usings.AddRange(requiredNamespaces);
+        serviceRegistration.Namespace = assemblyName;
+        serviceRegistration.ContainerType = Generator.ContainerType;
+        serviceRegistration.ContainerName = Generator.Name;
+        serviceRegistration.ProviderType = Generator.ProviderType;
 
         foreach (var type in typesToRegister)
         {
@@ -105,18 +107,16 @@ public abstract class ServiceRegistrationGenerator : ISourceGenerator
             if (serviceRegistrationEntity.FactoryRegistration == null && CheckIfAbstract(type)) continue;
             if (CheckIfManual(type)) continue;
             
-            // var registerLine = Generator.GenerateRegisterType(type.Name);
             GenerateForSelf(type, serviceRegistrationEntity);
             GenerateForServiceRegistration(type, serviceRegistrationEntity);
+            GenerateForScoped(type, serviceRegistrationEntity);
             GenerateForSingleton(type, serviceRegistrationEntity);
 
-            var registerLine = Generator.Generate(serviceRegistrationEntity);
-            sb.AppendLine($"        {registerLine}");
+            serviceRegistration.Entities.Add(serviceRegistrationEntity);
         }
 
-        sb.AppendLine("    }");
-        sb.AppendLine("}");
-        return sb.ToString();
+        var code = serviceRegistration.Build(Generator);
+        return code;
     }
 
     private void GenerateForSingleton(
@@ -126,11 +126,22 @@ public abstract class ServiceRegistrationGenerator : ISourceGenerator
         var singleInstanceAttribute = type.GetAttributes().FirstOrDefault(a => a.AttributeClass.Name == GlobalSettings.SingletonAttribute);
         if (singleInstanceAttribute != null)
         {
-            serviceRegistrationEntity.SingleInstance = true;
+            serviceRegistrationEntity.Scope = Scope.Singleton;
             if (singleInstanceAttribute.ConstructorArguments.Any(arg => (bool)arg.Value == true))
             {
                 serviceRegistrationEntity.AutoActivate = true;
             }
+        }
+    }
+    
+    private void GenerateForScoped(
+        INamedTypeSymbol type,
+        ServiceRegistrationEntity serviceRegistrationEntity)
+    {
+        var scopedAttribute = type.GetAttributes().FirstOrDefault(a => a.AttributeClass.Name == GlobalSettings.ScopedAttribute);
+        if (scopedAttribute != null)
+        {
+            serviceRegistrationEntity.Scope = Scope.Scoped;
         }
     }
 

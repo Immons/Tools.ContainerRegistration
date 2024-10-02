@@ -5,6 +5,7 @@
         <Nullable>disable</Nullable>
         <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
         <CompilerGeneratedFilesOutputPath>Generated</CompilerGeneratedFilesOutputPath>
+        <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
         <IsRoslynComponent>true</IsRoslynComponent>
         <LangVersion>latest</LangVersion>
         <Version>0.1.1</Version>
@@ -17,13 +18,7 @@
         <RepositoryType>Git</RepositoryType>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     </PropertyGroup>
-
-    <PropertyGroup>
-        <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
-        <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
-        <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)Generated</CompilerGeneratedFilesOutputPath>
-    </PropertyGroup>
-
+    
     <ItemGroup>
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
         <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4" />
@@ -31,16 +26,11 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Tools.ContainerRegistration.Common\Tools.ContainerRegistration.Common.csproj" />
+        <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
     </ItemGroup>
 
-    <Target Name="CopyCommonDll" AfterTargets="Build">
-        <Copy SourceFiles="..\Tools.ContainerRegistration.Common\bin\Release\netstandard2.0\Tools.ContainerRegistration.Common.dll"
-              DestinationFolder="$(OutDir)" />
-    </Target>
-
     <ItemGroup>
-        <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+      <ProjectReference Include="..\Tools.ContainerRegistration.Common\Tools.ContainerRegistration.Common.csproj"/>
     </ItemGroup>
 
 </Project>

@@ -3,10 +3,10 @@ namespace Tools.ContainerRegistration.Attributes;
 [AttributeUsage(AttributeTargets.Interface)]
 public class FactoryRegistrationAttribute : Attribute
 {
-    public FactoryRegistrationAttribute(string factoryMethodName)
+    public FactoryRegistrationAttribute(string factoryFullPath)
     {
-        FactoryMethodName = factoryMethodName;
+        FactoryFullPath = factoryFullPath;
     }
 
-    public string FactoryMethodName { get; }
+    public string FactoryFullPath { get; }
 }

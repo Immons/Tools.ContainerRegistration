@@ -1,12 +1,19 @@
 {
         "InterfaceNamingConvention" : "I",
         "ExcludedFromRegisteringAsConventionInterface" : [ 
+                "Map",
                 "Page",
-                "Map"
+                "ProfileViewModel",
+                "UserViewModel"
+        ],
+        "ExcludedFromRegisteringTypesEndingWith": [
+                "UserViewModel"
         ],
         "RegisterAsSelf" : true,
         "RegisterTypesEndingWith" : [
+                "Page",
                 "Service",
-                "Map"
+                "Map",
+                "ViewModel"
         ]
 }

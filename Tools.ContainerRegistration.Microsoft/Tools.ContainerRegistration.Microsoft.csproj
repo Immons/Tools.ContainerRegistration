@@ -34,11 +34,6 @@
         <ProjectReference Include="..\Tools.ContainerRegistration.Common\Tools.ContainerRegistration.Common.csproj" PrivateAssets="all"/>
     </ItemGroup>
 
-    <Target Name="CopyCommonDll" AfterTargets="Build">
-        <Copy SourceFiles="..\Tools.ContainerRegistration.Common\bin\Release\netstandard2.0\Tools.ContainerRegistration.Common.dll"
-              DestinationFolder="$(OutDir)" />
-    </Target>
-
     <ItemGroup>
         <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
     </ItemGroup>

@@ -7,6 +7,13 @@ namespace Tools.ContainerRegistration.Autofac;
 
 public class AutofacGenerator : IGenerator
 {
+    public string Name => "Autofac";
+    public string ProviderType => "IContainerContext";
+    public string ContainerType => $"ContainerBuilder";
+    public string Namespace => "Autofac";
+    
+    public ServiceRegistration GetServiceRegistration() => new AutofacServiceRegistration();
+    
     public string GenerateFactoryRegistration(string factoryMethodName, string interfaceTypeName)
     {
         return
@@ -28,6 +35,11 @@ public class AutofacGenerator : IGenerator
         return ".SingleInstance()";
     }
     
+    public string GenerateInstancePerLifetimeScope()
+    {
+        return ".InstancePerLifetimeScope()";
+    }
+    
     public string GenerateAutoActivate()
     {
         return ".AutoActivate()";
@@ -38,17 +50,7 @@ public class AutofacGenerator : IGenerator
         return $"builder.RegisterType<{interfaceTypeName}>()";
     }
 
-    public string GetContainerType()
-    {
-        return $"ContainerBuilder";
-    }
-
-    public string GetNamespace()
-    {
-        return "Autofac";
-    }
-
-    public string Generate(ServiceRegistrationEntity serviceRegistrationEntity)
+    public GeneratedServiceRegistrationEntity Generate(ServiceRegistrationEntity serviceRegistrationEntity)
     {
         var registrationLine = new StringBuilder();
         var typeName =
@@ -75,20 +77,24 @@ public class AutofacGenerator : IGenerator
             registrationLine.Append(GenerateSelf());
         }
 
-        if (serviceRegistrationEntity.SingleInstance)
+        if (serviceRegistrationEntity.Scope == Scope.Singleton)
         {
             registrationLine.Append(GenerateSingleInstance());
+            if (serviceRegistrationEntity.AutoActivate)
+            {
+                registrationLine.Append(GenerateAutoActivate());
+            }
         }
-        
-        if (serviceRegistrationEntity.AutoActivate)
+        else if (serviceRegistrationEntity.Scope == Scope.Scoped)
         {
-            registrationLine.Append(GenerateAutoActivate());
+            registrationLine.Append(GenerateInstancePerLifetimeScope());
         }
 
         registrationLine.Append(";");
 
-        return registrationLine.ToString();
+        return new GeneratedServiceRegistrationEntity
+        {
+            Entity = registrationLine.ToString().Trim()
+        };
     }
-
-    public string Name => "Autofac";
 }

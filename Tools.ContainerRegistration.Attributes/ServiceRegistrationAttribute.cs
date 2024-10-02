@@ -2,10 +2,10 @@ namespace Tools.ContainerRegistration.Attributes;
 
 public class ServiceRegistrationAttribute : Attribute
 {
-    public ServiceRegistrationAttribute(Type[] interfaceTypes)
+    public ServiceRegistrationAttribute(Type[] registerAs)
     {
-        InterfaceTypes = interfaceTypes;
+        RegisterAs = registerAs;
     }
     
-    public Type[] InterfaceTypes { get; }
+    public Type[] RegisterAs { get; }
 }
