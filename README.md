@@ -72,7 +72,6 @@ Classes with the `[ManualRegistration]` attribute are excluded from automatic re
 **Example:**
 ```csharp
 [ManualRegistration]
-[Singleton]
 public class TestUserPage : ITestUserPage
 {
     // This class will not be registered automatically due to ManualRegistration.
@@ -208,6 +207,7 @@ public class HelloWorldService : IHelloWorldService
 
 ```csharp
 [ManualRegistration]
+[Singleton]
 public class TestUserPage : ITestUserPage
 {
 }
