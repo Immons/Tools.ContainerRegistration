@@ -65,6 +65,7 @@ public class GlobalSettings
     /// <summary>
     /// Extracts a group name from a pattern or type name.
     /// E.g., "*Page" -> "Pages", "*ViewModel" -> "ViewModels", "*CommandBuilder" -> "CommandBuilders"
+    /// Note: "*Service" becomes "ServiceTypes" to avoid conflict with main RegisterServices method.
     /// </summary>
     public static string GetGroupNameFromPattern(string pattern)
     {
@@ -72,6 +73,10 @@ public class GlobalSettings
         var suffix = pattern.TrimStart('*').TrimEnd('*');
         if (string.IsNullOrEmpty(suffix))
             return "Other";
+
+        // Special case: "Service" -> "ServiceTypes" to avoid conflict with main RegisterServices method
+        if (suffix == "Service")
+            return "ServiceTypes";
 
         // Pluralize simple cases
         if (suffix.EndsWith("y") && !suffix.EndsWith("ey") && !suffix.EndsWith("ay") && !suffix.EndsWith("oy"))
