@@ -238,6 +238,45 @@ The source generator will generate factory registration code that:
 - **ExcludedFromRegisteringTypesEndingWith:** Excludes types from registration even if they match the suffix rules.
 - **ExcludedFromRegisteringAsConventionInterface:** Prevents automatic registration of a class as an interface based on convention.
 - **RegisterAsSelf:** If true service will be always registered as self (for example: TestPage will be registered as TestPage)
+- **SplitGeneratedFiles:** When true, splits generated code into multiple smaller files grouped by type suffix. This improves IDE performance (IntelliSense) for large projects. Default: `false`.
+
+### Split Generated Files
+
+When `SplitGeneratedFiles` is enabled, the generator creates multiple smaller files instead of one large file:
+
+```json
+{
+  "RegisterTypesMatching": ["*Page", "*ViewModel", "*Action", "*CommandBuilder"],
+  "SplitGeneratedFiles": true
+}
+```
+
+This generates:
+- `ServiceCollection_GeneratedServiceRegistration_Pages.g.cs` - with `RegisterPages(IServiceCollection builder)`
+- `ServiceCollection_GeneratedServiceRegistration_ViewModels.g.cs` - with `RegisterViewModels(IServiceCollection builder)`
+- `ServiceCollection_GeneratedServiceRegistration_Actions.g.cs` - with `RegisterActions(IServiceCollection builder)`
+- `ServiceCollection_GeneratedServiceRegistration_CommandBuilders.g.cs` - with `RegisterCommandBuilders(IServiceCollection builder)`
+- `ServiceCollection_GeneratedServiceRegistration.g.cs` - main aggregator:
+
+```csharp
+public static partial class ServiceCollection_GeneratedServiceRegistration
+{
+    public static void RegisterServices(IServiceCollection builder)
+    {
+        RegisterActions(builder);
+        RegisterCommandBuilders(builder);
+        RegisterPages(builder);
+        RegisterViewModels(builder);
+    }
+
+    public static void AfterContainerBuilt(IServiceProvider provider)
+    {
+        // OnActivated callbacks here
+    }
+}
+```
+
+Usage remains the same - just call `RegisterServices(builder)` and all group methods are invoked automatically.
 
 ---
 
