@@ -6,6 +6,9 @@
                 "Tools.ContainerRegistration.Sample",
                 "Tools.ContainerRegistration.Sample.Common"
         ],
+        "ScanAssemblies" : [
+                "Tools.ContainerRegistration.Sample.Common"
+        ],
         "ExcludedFromRegisteringMatching": [
                 "Tools.ContainerRegistration.Sample.ViewModels.Base*",
                 "Tools.ContainerRegistration.Sample.Maps.Base.*"

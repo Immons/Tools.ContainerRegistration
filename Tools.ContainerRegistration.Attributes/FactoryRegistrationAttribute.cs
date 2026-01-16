@@ -1,6 +1,6 @@
 namespace Tools.ContainerRegistration.Attributes;
 
-[AttributeUsage(AttributeTargets.Interface)]
+[AttributeUsage(AttributeTargets.Interface | AttributeTargets.Class)]
 public class FactoryRegistrationAttribute : Attribute
 {
     public FactoryRegistrationAttribute(string factoryFullPath)

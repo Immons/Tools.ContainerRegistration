@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Tools.ContainerRegistration.Common.Generators.Interfaces;
@@ -71,7 +73,7 @@ public class AutofacGenerator : IGenerator
         {
             registrationLine.Append(GenerateAs(registerAsInterface));
         }
-        
+
         if (serviceRegistrationEntity.RegisterAsSelf)
         {
             registrationLine.Append(GenerateSelf());
@@ -90,11 +92,32 @@ public class AutofacGenerator : IGenerator
             registrationLine.Append(GenerateInstancePerLifetimeScope());
         }
 
+        // Generate OnActivating for IInjector dependencies
+        if (serviceRegistrationEntity.InjectorDependencies.Any())
+        {
+            registrationLine.Append(GenerateOnActivating(typeName, serviceRegistrationEntity.InjectorDependencies));
+        }
+
         registrationLine.Append(";");
 
         return new GeneratedServiceRegistrationEntity
         {
             Entity = registrationLine.ToString().Trim()
         };
+    }
+
+    public string GenerateOnActivating(string typeName, List<InjectorDependency> injectorDependencies)
+    {
+        var sb = new StringBuilder();
+        sb.Append(".OnActivating(e => { var instance = e.Instance; var ctx = e.Context; ");
+
+        foreach (var dep in injectorDependencies)
+        {
+            // Generate: ((IInjector<IDependency>)instance).Inject(ctx.Resolve<IDependency>());
+            sb.Append($"(({dep.InjectorInterfaceFullName})instance).Inject(ctx.Resolve<{dep.DependencyTypeFullName}>()); ");
+        }
+
+        sb.Append("})");
+        return sb.ToString();
     }
 }

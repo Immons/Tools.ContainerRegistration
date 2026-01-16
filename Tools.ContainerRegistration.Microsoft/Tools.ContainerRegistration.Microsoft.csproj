@@ -7,7 +7,7 @@
         <CompilerGeneratedFilesOutputPath>Generated</CompilerGeneratedFilesOutputPath>
         <IsRoslynComponent>true</IsRoslynComponent>
         <LangVersion>latest</LangVersion>
-        <Version>0.1.5</Version>
+        <Version>0.1.7</Version>
         <Title>Tools.ContainerRegistration.Microsoft</Title>
         <Authors>Artur Malendowicz "Immons"</Authors>
         <Description>Generator for Microsoft IServiceCollection based on Tools.ContainerRegistration.Common</Description>
@@ -36,6 +36,7 @@
 
     <ItemGroup>
         <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+        <None Include="$(OutputPath)\Tools.ContainerRegistration.Common.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
     </ItemGroup>
 
     <Target Name="CopyNuGetPackage" AfterTargets="Pack">

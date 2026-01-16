@@ -8,6 +8,12 @@ public class MicrosoftServiceRegistration : ServiceRegistration
 {
     public List<string> FireAfterContainerBuilt { get; set; }
 
+    public MicrosoftServiceRegistration()
+    {
+        // Add System namespace for IServiceProvider
+        Usings.Add("System");
+    }
+
     public override string Build(IGenerator generator)
     {
         return MicrosoftServiceRegistrationTemplate.GenerateServiceRegistration(generator as MicrosoftGenerator, this);

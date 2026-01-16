@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Collections.Immutable;
 using Tools.ContainerRegistration.Common.Generators.Interfaces;
 using Tools.ContainerRegistration.Common.Models;
 
@@ -8,31 +8,64 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Threading;
 
-public abstract class ServiceRegistrationGenerator : ISourceGenerator
+public abstract class ServiceRegistrationGenerator : IIncrementalGenerator
 {
     protected abstract IGenerator Generator { get; }
 
-    public void Initialize(GeneratorInitializationContext context) 
+    public void Initialize(IncrementalGeneratorInitializationContext context)
     {
+        // Create provider for type declarations (classes and interfaces)
+        var typeDeclarations = context.SyntaxProvider
+            .CreateSyntaxProvider(
+                predicate: static (node, _) => node is ClassDeclarationSyntax or InterfaceDeclarationSyntax,
+                transform: static (ctx, _) => GetTypeDeclarationForGeneration(ctx))
+            .Where(static t => t is not null)
+            .Select(static (t, _) => t!);
+
+        // Combine with compilation and additional files
+        var compilationAndTypes = context.CompilationProvider
+            .Combine(typeDeclarations.Collect())
+            .Combine(context.AdditionalTextsProvider.Collect());
+
+        // Register source output
+        context.RegisterSourceOutput(compilationAndTypes, (spc, source) =>
+        {
+            var ((compilation, types), additionalFiles) = source;
+            Execute(compilation, types, additionalFiles, spc);
+        });
     }
 
-    public void Execute(GeneratorExecutionContext context)
+    private static TypeDeclarationSyntax? GetTypeDeclarationForGeneration(GeneratorSyntaxContext context)
     {
-        GlobalSettings.LoadSettings(context);
-        
-        var typesToRegister = DiscoverTypesForRegistration(context.Compilation).ToList();
+        return context.Node as TypeDeclarationSyntax;
+    }
 
-        var source = GenerateServiceRegistrationCode(context.Compilation.AssemblyName, typesToRegister);
+    private void Execute(
+        Compilation compilation,
+        ImmutableArray<TypeDeclarationSyntax> typeDeclarations,
+        ImmutableArray<AdditionalText> additionalFiles,
+        SourceProductionContext context)
+    {
+        if (typeDeclarations.IsDefaultOrEmpty)
+            return;
+
+        var settings = GlobalSettings.LoadSettings(additionalFiles, context.CancellationToken);
+        var typesToRegister = DiscoverTypesForRegistration(compilation, typeDeclarations, settings, context.CancellationToken).ToList();
+        var source = GenerateServiceRegistrationCode(compilation.AssemblyName, typesToRegister, settings);
 
         context.AddSource($"{Generator.Name}_GeneratedServiceRegistration.g.cs", source);
     }
-    
-    private IEnumerable<INamedTypeSymbol> DiscoverTypesForRegistration(Compilation compilation)
+
+    private IEnumerable<INamedTypeSymbol> DiscoverTypesForRegistration(
+        Compilation compilation,
+        ImmutableArray<TypeDeclarationSyntax> typeDeclarations,
+        GlobalSettings settings,
+        CancellationToken cancellationToken)
     {
         var types = new List<INamedTypeSymbol>();
-        
+
         bool MatchesPattern(string name, string pattern)
         {
             var regexPattern = "^" + System.Text.RegularExpressions.Regex.Escape(pattern).Replace("\\*", ".*") + "$";
@@ -42,62 +75,89 @@ public abstract class ServiceRegistrationGenerator : ISourceGenerator
         bool ShouldRegisterType(INamedTypeSymbol symbol)
         {
             if (symbol.IsStatic) return false;
-            
-            var hasManualRegistration = symbol.GetAttributes().Any(
-                a => a.AttributeClass.Name == GlobalSettings.ManualRegistrationAttribute);
-            if (hasManualRegistration) return false;
-            
-            var shouldRegisterBasedOnConventionName =
-                GlobalSettings.RegisterTypesMatching.Any(pattern => MatchesPattern(symbol.ToDisplayString(), pattern));
 
-            // Check if the type name matches any of the "ExcludedFromRegisteringMatching" patterns
+            var hasManualRegistration = symbol.GetAttributes().Any(
+                a => a.AttributeClass?.Name == GlobalSettings.ManualRegistrationAttribute);
+            if (hasManualRegistration) return false;
+
+            var shouldRegisterBasedOnConventionName =
+                settings.RegisterTypesMatching.Any(pattern => MatchesPattern(symbol.ToDisplayString(), pattern));
+
             var isExcludedBasedOnConvention =
-                GlobalSettings.ExcludedFromRegisteringMatching.Any(pattern => MatchesPattern(symbol.ToDisplayString(), pattern));
+                settings.ExcludedFromRegisteringMatching.Any(pattern => MatchesPattern(symbol.ToDisplayString(), pattern));
 
             var shouldRegisterBasedOnAttributes = symbol.GetAttributes().Any(
-                a => a.AttributeClass.Name == GlobalSettings.SingletonAttribute ||
-                     a.AttributeClass.Name == GlobalSettings.ScopedAttribute ||
-                     a.AttributeClass.Name == GlobalSettings.ServiceRegistrationAttribute);
-            
+                a => a.AttributeClass?.Name == GlobalSettings.SingletonAttribute ||
+                     a.AttributeClass?.Name == GlobalSettings.ScopedAttribute ||
+                     a.AttributeClass?.Name == GlobalSettings.ServiceRegistrationAttribute);
+
             return shouldRegisterBasedOnAttributes || (shouldRegisterBasedOnConventionName && !isExcludedBasedOnConvention);
         }
 
-        foreach (var syntaxTree in compilation.SyntaxTrees)
+        // Process type declarations from syntax
+        foreach (var typeDeclaration in typeDeclarations)
         {
-            var semanticModel = compilation.GetSemanticModel(syntaxTree);
-            var root = syntaxTree.GetRoot();
-            var classDeclarations = root.DescendantNodes().OfType<ClassDeclarationSyntax>();
-            var interfaceDeclarations = root.DescendantNodes().OfType<InterfaceDeclarationSyntax>().ToList();
+            cancellationToken.ThrowIfCancellationRequested();
 
-            foreach (var classDeclaration in classDeclarations)
+            var semanticModel = compilation.GetSemanticModel(typeDeclaration.SyntaxTree);
+            var symbol = semanticModel.GetDeclaredSymbol(typeDeclaration, cancellationToken) as INamedTypeSymbol;
+
+            if (symbol == null)
+                continue;
+
+            if (ShouldRegisterType(symbol))
+                types.Add(symbol);
+        }
+
+        // Scan types from referenced assemblies specified in ScanAssemblies config
+        if (settings.ScanAssemblies.Any())
+        {
+            foreach (var reference in compilation.References)
             {
-                var symbol = semanticModel.GetDeclaredSymbol(classDeclaration) as INamedTypeSymbol;
-                if (symbol == null)
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var assemblySymbol = compilation.GetAssemblyOrModuleSymbol(reference) as IAssemblySymbol;
+                if (assemblySymbol == null)
                     continue;
 
-                if (ShouldRegisterType(symbol))
-                    types.Add(symbol);
-            }
-            
-            foreach (var interfaceDeclaration in interfaceDeclarations)
-            {
-                var symbol = semanticModel.GetDeclaredSymbol(interfaceDeclaration) as INamedTypeSymbol;
-                if (symbol == null)
+                if (!settings.ScanAssemblies.Contains(assemblySymbol.Name))
                     continue;
 
-                if (ShouldRegisterType(symbol))
-                    types.Add(symbol);
+                var typesFromAssembly = GetAllTypesFromNamespace(assemblySymbol.GlobalNamespace);
+                foreach (var type in typesFromAssembly)
+                {
+                    if (ShouldRegisterType(type))
+                        types.Add(type);
+                }
             }
         }
+
         return types;
+    }
+
+    private IEnumerable<INamedTypeSymbol> GetAllTypesFromNamespace(INamespaceSymbol namespaceSymbol)
+    {
+        foreach (var type in namespaceSymbol.GetTypeMembers())
+        {
+            yield return type;
+        }
+
+        foreach (var nestedNamespace in namespaceSymbol.GetNamespaceMembers())
+        {
+            foreach (var type in GetAllTypesFromNamespace(nestedNamespace))
+            {
+                yield return type;
+            }
+        }
     }
 
     private string GenerateServiceRegistrationCode(
         string assemblyName,
-        List<INamedTypeSymbol> typesToRegister)
+        List<INamedTypeSymbol> typesToRegister,
+        GlobalSettings settings)
     {
         var requiredNamespaces = CollectRequiredNamespaces(typesToRegister);
-        
+
         var serviceRegistration = Generator.GetServiceRegistration();
         serviceRegistration.Usings.Add(Generator.Namespace);
         serviceRegistration.Usings.AddRange(requiredNamespaces);
@@ -109,18 +169,18 @@ public abstract class ServiceRegistrationGenerator : ISourceGenerator
         foreach (var type in typesToRegister)
         {
             var serviceRegistrationEntity = new ServiceRegistrationEntity(type);
-            
-            GenerateForFactory(
-                type,
-                serviceRegistrationEntity);
+
+            GenerateForFactory(type, serviceRegistrationEntity);
 
             if (serviceRegistrationEntity.FactoryRegistration == null && CheckIfAbstract(type)) continue;
             if (CheckIfManual(type)) continue;
-            
-            GenerateForSelf(type, serviceRegistrationEntity);
-            GenerateForServiceRegistration(type, serviceRegistrationEntity);
+
+            GenerateForSelf(type, serviceRegistrationEntity, settings);
+            GenerateForServiceRegistration(type, serviceRegistrationEntity, settings);
             GenerateForScoped(type, serviceRegistrationEntity);
             GenerateForSingleton(type, serviceRegistrationEntity);
+            GenerateForInjectorDependencies(type, serviceRegistrationEntity);
+            GenerateForOnActivated(type, serviceRegistrationEntity);
 
             serviceRegistration.Entities.Add(serviceRegistrationEntity);
         }
@@ -133,7 +193,7 @@ public abstract class ServiceRegistrationGenerator : ISourceGenerator
         INamedTypeSymbol type,
         ServiceRegistrationEntity serviceRegistrationEntity)
     {
-        var singleInstanceAttribute = type.GetAttributes().FirstOrDefault(a => a.AttributeClass.Name == GlobalSettings.SingletonAttribute);
+        var singleInstanceAttribute = type.GetAttributes().FirstOrDefault(a => a.AttributeClass?.Name == GlobalSettings.SingletonAttribute);
         if (singleInstanceAttribute != null)
         {
             serviceRegistrationEntity.Scope = Scope.Singleton;
@@ -143,12 +203,12 @@ public abstract class ServiceRegistrationGenerator : ISourceGenerator
             }
         }
     }
-    
+
     private void GenerateForScoped(
         INamedTypeSymbol type,
         ServiceRegistrationEntity serviceRegistrationEntity)
     {
-        var scopedAttribute = type.GetAttributes().FirstOrDefault(a => a.AttributeClass.Name == GlobalSettings.ScopedAttribute);
+        var scopedAttribute = type.GetAttributes().FirstOrDefault(a => a.AttributeClass?.Name == GlobalSettings.ScopedAttribute);
         if (scopedAttribute != null)
         {
             serviceRegistrationEntity.Scope = Scope.Scoped;
@@ -162,14 +222,15 @@ public abstract class ServiceRegistrationGenerator : ISourceGenerator
 
     private bool CheckIfManual(INamedTypeSymbol type)
     {
-        return type.GetAttributes().FirstOrDefault(a => a.AttributeClass.Name == GlobalSettings.ManualRegistrationAttribute) != null;
+        return type.GetAttributes().FirstOrDefault(a => a.AttributeClass?.Name == GlobalSettings.ManualRegistrationAttribute) != null;
     }
 
     private void GenerateForServiceRegistration(
         INamedTypeSymbol type,
-        ServiceRegistrationEntity serviceRegistrationEntity)
+        ServiceRegistrationEntity serviceRegistrationEntity,
+        GlobalSettings settings)
     {
-        var serviceRegistrationAttribute = type.GetAttributes().FirstOrDefault(a => a.AttributeClass.Name == GlobalSettings.ServiceRegistrationAttribute);
+        var serviceRegistrationAttribute = type.GetAttributes().FirstOrDefault(a => a.AttributeClass?.Name == GlobalSettings.ServiceRegistrationAttribute);
         if (serviceRegistrationAttribute != null)
         {
             var interfaceTypes = serviceRegistrationAttribute.ConstructorArguments[0].Values;
@@ -182,18 +243,16 @@ public abstract class ServiceRegistrationGenerator : ISourceGenerator
         }
         else
         {
-            if (GlobalSettings.RegisterAsAllInheritedTypes)
+            if (settings.RegisterAsAllInheritedTypes)
             {
-                // Register all inherited interfaces, but only those from the same assembly
                 serviceRegistrationEntity.RegisterAsInterfaces.AddRange(
                     type.AllInterfaces
                         .Where(SymbolBelongsToAllowedAssemblies)
                         .Select(t => t.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
                 );
             }
-            else if (GlobalSettings.RegisterAsDirectlyInheritedTypes)
+            else if (settings.RegisterAsDirectlyInheritedTypes)
             {
-                // Register only directly implemented interfaces, but only those from the same assembly
                 serviceRegistrationEntity.RegisterAsInterfaces.AddRange(
                     type.Interfaces
                         .Where(SymbolBelongsToAllowedAssemblies)
@@ -203,25 +262,71 @@ public abstract class ServiceRegistrationGenerator : ISourceGenerator
 
             bool SymbolBelongsToAllowedAssemblies(INamedTypeSymbol symbol)
             {
-                if (!GlobalSettings.RegisterInterfacesOnlyFromThatAssemblies.Any()) return true;
+                if (!settings.RegisterInterfacesOnlyFromThatAssemblies.Any()) return true;
                 var assemblyName = symbol.ContainingAssembly.Name;
-                return GlobalSettings.RegisterInterfacesOnlyFromThatAssemblies.Contains(assemblyName);
+                return settings.RegisterInterfacesOnlyFromThatAssemblies.Contains(assemblyName);
             }
         }
     }
 
     private void GenerateForSelf(
         INamedTypeSymbol type,
+        ServiceRegistrationEntity serviceRegistrationEntity,
+        GlobalSettings settings)
+    {
+        if (settings.RegisterAsSelf)
+            serviceRegistrationEntity.RegisterAsSelf = true;
+    }
+
+    private void GenerateForInjectorDependencies(
+        INamedTypeSymbol type,
         ServiceRegistrationEntity serviceRegistrationEntity)
     {
-        if (GlobalSettings.RegisterAsSelf)
-            serviceRegistrationEntity.RegisterAsSelf = true;
+        // Check if type has [InjectDependencies] attribute
+        var hasInjectDependenciesAttribute = type.GetAttributes()
+            .Any(a => a.AttributeClass?.Name == GlobalSettings.InjectDependenciesAttribute);
+
+        // Also check base types for the attribute (inherited)
+        var baseType = type.BaseType;
+        while (!hasInjectDependenciesAttribute && baseType != null)
+        {
+            hasInjectDependenciesAttribute = baseType.GetAttributes()
+                .Any(a => a.AttributeClass?.Name == GlobalSettings.InjectDependenciesAttribute);
+            baseType = baseType.BaseType;
+        }
+
+        if (!hasInjectDependenciesAttribute)
+            return;
+
+        // Find all IInjector<T> interfaces implemented by this type and its base types
+        var allInterfaces = type.AllInterfaces;
+        foreach (var iface in allInterfaces)
+        {
+            if (iface.IsGenericType &&
+                iface.Name == GlobalSettings.IInjectorInterface &&
+                iface.TypeArguments.Length == 1)
+            {
+                var typeArgument = iface.TypeArguments[0];
+                var dependencyTypeFullName = typeArgument.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                var injectorInterfaceFullName = iface.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
+                // Avoid duplicates
+                if (!serviceRegistrationEntity.InjectorDependencies.Exists(d => d.DependencyTypeFullName == dependencyTypeFullName))
+                {
+                    serviceRegistrationEntity.InjectorDependencies.Add(new InjectorDependency
+                    {
+                        InjectorInterfaceFullName = injectorInterfaceFullName,
+                        DependencyTypeFullName = dependencyTypeFullName
+                    });
+                }
+            }
+        }
     }
 
     private void GenerateForFactory(INamedTypeSymbol type, ServiceRegistrationEntity serviceRegistrationEntity)
     {
         var factoryAttribute = type.GetAttributes()
-            .FirstOrDefault(attr => attr.AttributeClass.Name == GlobalSettings.FactoryRegistrationAttribute);
+            .FirstOrDefault(attr => attr.AttributeClass?.Name == GlobalSettings.FactoryRegistrationAttribute);
 
         if (factoryAttribute != null)
         {
@@ -229,11 +334,48 @@ public abstract class ServiceRegistrationGenerator : ISourceGenerator
             if (!string.IsNullOrWhiteSpace(factoryMethodName))
             {
                 serviceRegistrationEntity.FactoryRegistration = new FactoryRegistrationEntity(factoryMethodName);
+                serviceRegistrationEntity.RegisterAsInterfaces.Add(type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
                 return;
             }
         }
+    }
 
-        return;
+    private void GenerateForOnActivated(INamedTypeSymbol type, ServiceRegistrationEntity serviceRegistrationEntity)
+    {
+        var onActivatedAttributes = type.GetAttributes()
+            .Where(attr => attr.AttributeClass?.Name == GlobalSettings.OnActivatedAttribute)
+            .ToList();
+
+        foreach (var attribute in onActivatedAttributes)
+        {
+            var constructorArgs = attribute.ConstructorArguments;
+
+            if (constructorArgs.Length == 1 && constructorArgs[0].Value is string methodName)
+            {
+                // Instance method: [OnActivated("MethodName")]
+                serviceRegistrationEntity.OnActivatedCallbacks.Add(new OnActivatedCallback
+                {
+                    MethodName = methodName,
+                    IsInstanceMethod = true
+                });
+            }
+            else if (constructorArgs.Length == 2)
+            {
+                // Static method: [OnActivated(typeof(TargetType), "MethodName")]
+                var targetType = constructorArgs[0].Value as INamedTypeSymbol;
+                var staticMethodName = constructorArgs[1].Value as string;
+
+                if (targetType != null && !string.IsNullOrWhiteSpace(staticMethodName))
+                {
+                    serviceRegistrationEntity.OnActivatedCallbacks.Add(new OnActivatedCallback
+                    {
+                        TargetTypeFullName = targetType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                        MethodName = staticMethodName,
+                        IsInstanceMethod = false
+                    });
+                }
+            }
+        }
     }
 
     private HashSet<string> CollectRequiredNamespaces(IEnumerable<INamedTypeSymbol> types)
@@ -242,15 +384,13 @@ public abstract class ServiceRegistrationGenerator : ISourceGenerator
 
         foreach (var type in types)
         {
-            // Collect the namespace of the class
             if (!string.IsNullOrWhiteSpace(type.ContainingNamespace?.ToString()))
             {
                 namespaces.Add(type.ContainingNamespace.ToString());
             }
 
-            // Collect the namespaces of the interfaces in the attribute
             var attribute = type.GetAttributes()
-                .FirstOrDefault(attr => attr.AttributeClass.Name == GlobalSettings.ServiceRegistrationAttribute);
+                .FirstOrDefault(attr => attr.AttributeClass?.Name == GlobalSettings.ServiceRegistrationAttribute);
 
             if (attribute != null)
             {

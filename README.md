@@ -11,6 +11,8 @@ This project demonstrates how to register various services using Autofac or Micr
     - [ManualRegistration](#manualregistration)
     - [ServiceRegistration](#serviceregistration)
     - [FactoryRegistration](#factoryregistration)
+    - [OnActivated](#onactivated)
+    - [InjectDependencies](#injectdependencies)
 3. [Service Factory](#service-factory)
 4. [Registration Rules](#registration-rules)
 5. [Examples](#examples)
@@ -98,7 +100,9 @@ public class FriendlyUserViewModel : IBaseUserViewModel, IFriendsViewModel
 
 The `[FactoryRegistration]` attribute is used to register a service via a factory method. This allows for custom service creation, where the factory method accepts a `Type` and a service provider (either `IServiceProvider` or `IComponentContext` for Autofac).
 
-**Example:**
+Can be applied to both **interfaces** and **classes**.
+
+**Example on interface:**
 
 ```csharp
 [FactoryRegistration("Tools.ContainerRegistration.Sample.HelloWorldServiceFactory.CreateHelloWorldService")]
@@ -108,6 +112,119 @@ public interface IHelloWorldService
     void SayHello();
 }
 ```
+
+**Example on class with interface forwarding:**
+
+```csharp
+[Singleton]
+[FactoryRegistration("MyApp.Services.MobileLanguageBinderFactory.Create")]
+[ServiceRegistration(typeof(ILanguageBinder))]
+public class MobileLanguageBinder : LanguageBinder
+{
+    public MobileLanguageBinder(ITextProvider textProvider) : base(textProvider) { }
+}
+
+public static class MobileLanguageBinderFactory
+{
+    public static object Create(Type interfaceType, IServiceProvider provider)
+    {
+        var resx = new ResxTextProvider(AppResources.ResourceManager);
+        resx.CurrentLanguage = Settings.CurrentCulture;
+        return new MobileLanguageBinder(resx);
+    }
+}
+```
+
+When `[FactoryRegistration]` is used with `[ServiceRegistration]`, the generator creates forwarding registrations for interfaces:
+```csharp
+// Factory registration for concrete type
+builder.AddSingleton(typeof(MobileLanguageBinder), provider => MobileLanguageBinderFactory.Create(...));
+// Forwarding registration for interface
+builder.AddSingleton<ILanguageBinder>(provider => provider.GetRequiredService<MobileLanguageBinder>());
+```
+
+### OnActivated
+
+The `[OnActivated]` attribute specifies a callback method to be invoked after the service is resolved from the container. This is useful for setting up locators, initializing services, or performing post-resolution configuration.
+
+Can be applied **multiple times** to a single class.
+
+**Static method callback (Locator pattern):**
+
+```csharp
+[Singleton]
+[OnActivated(typeof(LanguageBinderLocator), nameof(LanguageBinderLocator.SetImplementation))]
+public class MobileLanguageBinder : LanguageBinder
+{
+    // After resolution, LanguageBinderLocator.SetImplementation(instance) will be called
+}
+```
+
+**Instance method callback:**
+
+```csharp
+[Singleton]
+[OnActivated(nameof(Initialize))]
+public class MyService : IMyService
+{
+    public void Initialize()
+    {
+        // This method is called after the service is resolved
+    }
+}
+```
+
+**Combined with FactoryRegistration:**
+
+```csharp
+[Singleton]
+[FactoryRegistration("MyApp.Services.MobileLanguageBinderFactory.Create")]
+[OnActivated(typeof(LanguageBinderLocator), nameof(LanguageBinderLocator.SetImplementation))]
+[ServiceRegistration(typeof(ILanguageBinder))]
+public class MobileLanguageBinder : LanguageBinder
+{
+    public MobileLanguageBinder(ITextProvider textProvider) : base(textProvider) { }
+}
+```
+
+This generates:
+```csharp
+// In RegisterServices:
+builder.AddSingleton(typeof(MobileLanguageBinder), provider => MobileLanguageBinderFactory.Create(...));
+builder.AddSingleton<ILanguageBinder>(provider => provider.GetRequiredService<MobileLanguageBinder>());
+
+// In AfterContainerBuilt:
+var instance_MobileLanguageBinder = provider.GetRequiredService<MobileLanguageBinder>();
+LanguageBinderLocator.SetImplementation(instance_MobileLanguageBinder);
+```
+
+### InjectDependencies
+
+The `[InjectDependencies]` attribute marks a class that requires dependency injection via the `IInjector<T>` pattern. This is useful when a class needs dependencies that cannot be resolved through constructor injection (e.g., circular dependencies or late-bound dependencies).
+
+**Example:**
+
+```csharp
+public interface IInjector<T>
+{
+    void Inject(T dependency);
+}
+
+[InjectDependencies]
+public class MyViewModel : IInjector<INavigationService>
+{
+    private INavigationService _navigationService;
+
+    public void Inject(INavigationService dependency)
+    {
+        _navigationService = dependency;
+    }
+}
+```
+
+The source generator will generate factory registration code that:
+1. Creates the instance using `ActivatorUtilities.CreateInstance`
+2. Calls the `Inject` method for each `IInjector<T>` interface implemented
 
 ---
 
@@ -268,12 +385,24 @@ public static class ServiceCollection_GeneratedServiceRegistration
          Tools.ContainerRegistration.Microsoft.Extensions.ServiceCollectionExtension.ReUseSingleton<global::Tools.ContainerRegistration.Sample.TestService, Tools.ContainerRegistration.Sample.ITestService2>(builder);
          builder.AddSingleton<global::Tools.ContainerRegistration.Sample.TestService>();
          builder.AddSingleton(typeof(global::Tools.ContainerRegistration.Sample.IHelloWorldService), provider => Tools.ContainerRegistration.Sample.HelloWorldServiceFactory.CreateHelloWorldService(typeof(global::Tools.ContainerRegistration.Sample.IHelloWorldService), provider));
+         // Factory + interface forwarding example:
+         builder.AddSingleton(typeof(global::MyApp.MobileLanguageBinder), provider => MyApp.MobileLanguageBinderFactory.Create(typeof(global::MyApp.MobileLanguageBinder), provider));
+         builder.AddSingleton<MyApp.ILanguageBinder>(provider => provider.GetRequiredService<global::MyApp.MobileLanguageBinder>());
     }
 
     public static void AfterContainerBuilt(IServiceProvider provider)
     {
+         // AutoActivate services (marked with [Singleton(true)])
          provider.GetRequiredService<TestService>();
          provider.GetRequiredService<IHelloWorldService>();
+
+         // OnActivated callbacks (marked with [OnActivated])
+         var instance_MobileLanguageBinder = provider.GetRequiredService<global::MyApp.MobileLanguageBinder>();
+         global::MyApp.LanguageBinderLocator.SetImplementation(instance_MobileLanguageBinder);
+
+         // Instance method callbacks
+         var instance_MyService = provider.GetRequiredService<global::MyApp.MyService>();
+         instance_MyService.Initialize();
     }
 }
 ```
@@ -288,7 +417,9 @@ ServiceCollection_GeneratedServiceRegistration.AfterContainerBuilt(provider);
 ```
 
 take a look that it also generates **void AfterContainerBuilt(IServiceProvider provider)** method.
-This method is used as way to AutoActivate services for Microsoft DI.
+This method is used for:
+- **AutoActivate** - services marked with `[Singleton(true)]` are resolved to trigger construction
+- **OnActivated callbacks** - services marked with `[OnActivated]` have their callback methods invoked after resolution
 
 ### GeneratedServiceRegistration namespace
 

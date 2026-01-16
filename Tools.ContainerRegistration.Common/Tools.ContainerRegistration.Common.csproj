@@ -4,8 +4,10 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <Nullable>disable</Nullable>
     <LangVersion>latest</LangVersion>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>0.1.5</Version>
+    <Version>0.1.7</Version>
     <Title>Tools.ContainerRegistration.Common</Title>
     <Authors>Artur Malendowicz "Immons"</Authors>
     <Description>Common project serving as base class for container generators</Description>
@@ -13,7 +15,6 @@
     <PackageProjectUrl>https://github.com/Immons/Tools.ContainerRegistration</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Immons/Tools.ContainerRegistration</RepositoryUrl>
     <RepositoryType>Git</RepositoryType>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 </PropertyGroup>
 
 <ItemGroup>

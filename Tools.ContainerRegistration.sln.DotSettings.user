@@ -6,6 +6,9 @@
   &lt;Assembly Path="/Users/immons/Projects/Tools.ContainerRegistration/Tools.ContainerRegistration.Autofac/bin/Release/netstandard2.0/Tools.ContainerRegistration.Autofac.dll" /&gt;
   &lt;Assembly Path="/Users/immons/Projects/Tools.ContainerRegistration/Tools.ContainerRegistration.Autofac/bin/Debug/netstandard2.0/Tools.ContainerRegistration.Common.dll" /&gt;
 &lt;/AssemblyExplorer&gt;</s:String>
+	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=69f11f7a_002D8d9e_002D4dd5_002D879c_002D5b56d9bfee4e/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="All tests from Solution" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;
+  &lt;Solution /&gt;
+&lt;/SessionState&gt;</s:String>
 	
 	<s:Boolean x:Key="/Default/UnloadedProject/UnloadedProjects/=89496118_002Dc419_002D428b_002D95e2_002D126b72bac8db_0023Tools_002EContainerRegistration_002ESample_002ENuget/@EntryIndexedValue">True</s:Boolean>
 	
