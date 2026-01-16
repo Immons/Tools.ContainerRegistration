@@ -53,9 +53,20 @@ public abstract class ServiceRegistrationGenerator : IIncrementalGenerator
 
         var settings = GlobalSettings.LoadSettings(additionalFiles, context.CancellationToken);
         var typesToRegister = DiscoverTypesForRegistration(compilation, typeDeclarations, settings, context.CancellationToken).ToList();
-        var source = GenerateServiceRegistrationCode(compilation.AssemblyName, typesToRegister, settings);
 
-        context.AddSource($"{Generator.Name}_GeneratedServiceRegistration.g.cs", source);
+        if (settings.SplitGeneratedFiles)
+        {
+            var sourceFiles = GenerateSplitServiceRegistrationCode(compilation.AssemblyName, typesToRegister, settings);
+            foreach (var sourceFile in sourceFiles)
+            {
+                context.AddSource(sourceFile.HintName, sourceFile.Content);
+            }
+        }
+        else
+        {
+            var source = GenerateServiceRegistrationCode(compilation.AssemblyName, typesToRegister, settings);
+            context.AddSource($"{Generator.Name}_GeneratedServiceRegistration.g.cs", source);
+        }
     }
 
     private IEnumerable<INamedTypeSymbol> DiscoverTypesForRegistration(
@@ -187,6 +198,49 @@ public abstract class ServiceRegistrationGenerator : IIncrementalGenerator
 
         var code = serviceRegistration.Build(Generator);
         return code;
+    }
+
+    private IEnumerable<GeneratedSourceFile> GenerateSplitServiceRegistrationCode(
+        string assemblyName,
+        List<INamedTypeSymbol> typesToRegister,
+        GlobalSettings settings)
+    {
+        var serviceRegistration = Generator.GetServiceRegistration();
+        serviceRegistration.Usings.Add(Generator.Namespace);
+        serviceRegistration.Namespace = assemblyName;
+        serviceRegistration.ContainerType = Generator.ContainerType;
+        serviceRegistration.ContainerName = Generator.Name;
+        serviceRegistration.ProviderType = Generator.ProviderType;
+
+        // Group types by their suffix pattern
+        var groupedEntities = new Dictionary<string, List<ServiceRegistrationEntity>>();
+
+        foreach (var type in typesToRegister)
+        {
+            var serviceRegistrationEntity = new ServiceRegistrationEntity(type);
+
+            GenerateForFactory(type, serviceRegistrationEntity);
+
+            if (serviceRegistrationEntity.FactoryRegistration == null && CheckIfAbstract(type)) continue;
+            if (CheckIfManual(type)) continue;
+
+            GenerateForSelf(type, serviceRegistrationEntity, settings);
+            GenerateForServiceRegistration(type, serviceRegistrationEntity, settings);
+            GenerateForScoped(type, serviceRegistrationEntity);
+            GenerateForSingleton(type, serviceRegistrationEntity);
+            GenerateForInjectorDependencies(type, serviceRegistrationEntity);
+            GenerateForOnActivated(type, serviceRegistrationEntity);
+
+            // Determine which group this type belongs to
+            var groupName = settings.GetGroupForType(type.ToDisplayString());
+
+            if (!groupedEntities.ContainsKey(groupName))
+                groupedEntities[groupName] = new List<ServiceRegistrationEntity>();
+
+            groupedEntities[groupName].Add(serviceRegistrationEntity);
+        }
+
+        return serviceRegistration.BuildSplit(Generator, groupedEntities);
     }
 
     private void GenerateForSingleton(

@@ -35,6 +35,7 @@ public class GlobalSettings
     public bool RegisterAsSelf { get; private set; } = true;
     public bool RegisterAsAllInheritedTypes { get; private set; } = true;
     public bool RegisterAsDirectlyInheritedTypes { get; private set; } = true;
+    public bool SplitGeneratedFiles { get; private set; } = false;
 
     public static GlobalSettings LoadSettings(ImmutableArray<AdditionalText> additionalFiles, CancellationToken cancellationToken)
     {
@@ -54,9 +55,47 @@ public class GlobalSettings
                 settings.RegisterAsDirectlyInheritedTypes = config?.RegisterAsDirectlyInheritedTypes ?? true;
                 settings.RegisterInterfacesOnlyFromThatAssemblies = config?.RegisterInterfacesOnlyFromThatAssemblies ?? Array.Empty<string>();
                 settings.ScanAssemblies = config?.ScanAssemblies ?? Array.Empty<string>();
+                settings.SplitGeneratedFiles = config?.SplitGeneratedFiles ?? false;
             }
         }
 
         return settings;
+    }
+
+    /// <summary>
+    /// Extracts a group name from a pattern or type name.
+    /// E.g., "*Page" -> "Pages", "*ViewModel" -> "ViewModels", "*CommandBuilder" -> "CommandBuilders"
+    /// </summary>
+    public static string GetGroupNameFromPattern(string pattern)
+    {
+        // Remove wildcards and get the suffix
+        var suffix = pattern.TrimStart('*').TrimEnd('*');
+        if (string.IsNullOrEmpty(suffix))
+            return "Other";
+
+        // Pluralize simple cases
+        if (suffix.EndsWith("y") && !suffix.EndsWith("ey") && !suffix.EndsWith("ay") && !suffix.EndsWith("oy"))
+            return suffix.Substring(0, suffix.Length - 1) + "ies";
+
+        if (suffix.EndsWith("s") || suffix.EndsWith("x") || suffix.EndsWith("ch") || suffix.EndsWith("sh"))
+            return suffix + "es";
+
+        return suffix + "s";
+    }
+
+    /// <summary>
+    /// Determines which group a type belongs to based on RegisterTypesMatching patterns.
+    /// </summary>
+    public string GetGroupForType(string typeName)
+    {
+        foreach (var pattern in RegisterTypesMatching)
+        {
+            var regexPattern = "^" + System.Text.RegularExpressions.Regex.Escape(pattern).Replace("\\*", ".*") + "$";
+            if (System.Text.RegularExpressions.Regex.IsMatch(typeName, regexPattern))
+            {
+                return GetGroupNameFromPattern(pattern);
+            }
+        }
+        return "Other";
     }
 }

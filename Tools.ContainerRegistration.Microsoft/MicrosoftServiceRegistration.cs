@@ -18,4 +18,9 @@ public class MicrosoftServiceRegistration : ServiceRegistration
     {
         return MicrosoftServiceRegistrationTemplate.GenerateServiceRegistration(generator as MicrosoftGenerator, this);
     }
+
+    public override IEnumerable<GeneratedSourceFile> BuildSplit(IGenerator generator, Dictionary<string, List<ServiceRegistrationEntity>> groupedEntities)
+    {
+        return MicrosoftServiceRegistrationTemplate.GenerateSplitServiceRegistration(generator as MicrosoftGenerator, this, groupedEntities);
+    }
 }
