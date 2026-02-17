@@ -10,6 +10,26 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 
+// Diagnostic descriptors for logging
+public static class GeneratorDiagnostics
+{
+    public static readonly DiagnosticDescriptor InfoLog = new(
+        id: "TCR001",
+        title: "Generator Info",
+        messageFormat: "{0}",
+        category: "Tools.ContainerRegistration",
+        DiagnosticSeverity.Warning, // Warning żeby było widoczne, Info często jest ukryte
+        isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor ErrorLog = new(
+        id: "TCR002",
+        title: "Generator Error",
+        messageFormat: "{0}",
+        category: "Tools.ContainerRegistration",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+}
+
 public abstract class ServiceRegistrationGenerator : IIncrementalGenerator
 {
     protected abstract IGenerator Generator { get; }
@@ -42,7 +62,52 @@ public abstract class ServiceRegistrationGenerator : IIncrementalGenerator
         return context.Node as TypeDeclarationSyntax;
     }
 
+    private void Log(SourceProductionContext context, string message)
+    {
+        context.ReportDiagnostic(Diagnostic.Create(GeneratorDiagnostics.InfoLog, Location.None, message));
+    }
+
+    private void LogError(SourceProductionContext context, string message)
+    {
+        context.ReportDiagnostic(Diagnostic.Create(GeneratorDiagnostics.ErrorLog, Location.None, message));
+    }
+
     private void Execute(
+        Compilation compilation,
+        ImmutableArray<TypeDeclarationSyntax> typeDeclarations,
+        ImmutableArray<AdditionalText> additionalFiles,
+        SourceProductionContext context)
+    {
+        Log(context, $"[{Generator.Name}] Starting for {compilation.AssemblyName}, types: {typeDeclarations.Length}, files: {additionalFiles.Length}");
+
+        try
+        {
+            ExecuteInternal(compilation, typeDeclarations, additionalFiles, context);
+            Log(context, $"[{Generator.Name}] Completed successfully for {compilation.AssemblyName}");
+        }
+        catch (System.Exception ex)
+        {
+            LogError(context, $"[{Generator.Name}] Exception: {ex.GetType().Name}: {ex.Message}");
+
+            // Always emit diagnostic file on error
+            var diagnosticContent = $@"// Generator Error Diagnostic
+// Generator: {Generator.Name}
+// Assembly: {compilation.AssemblyName}
+// TypeDeclarations count: {typeDeclarations.Length}
+// AdditionalFiles count: {additionalFiles.Length}
+// AdditionalFiles: {string.Join(", ", additionalFiles.Select(f => System.IO.Path.GetFileName(f.Path)))}
+// Exception Type: {ex.GetType().FullName}
+// Exception Message: {ex.Message}
+// Stack Trace:
+/*
+{ex.StackTrace}
+*/
+";
+            context.AddSource($"{Generator.Name}_GeneratorError.g.cs", diagnosticContent);
+        }
+    }
+
+    private void ExecuteInternal(
         Compilation compilation,
         ImmutableArray<TypeDeclarationSyntax> typeDeclarations,
         ImmutableArray<AdditionalText> additionalFiles,
@@ -51,8 +116,16 @@ public abstract class ServiceRegistrationGenerator : IIncrementalGenerator
         if (typeDeclarations.IsDefaultOrEmpty)
             return;
 
+        var totalSw = System.Diagnostics.Stopwatch.StartNew();
+        var stepSw = System.Diagnostics.Stopwatch.StartNew();
+
         var settings = GlobalSettings.LoadSettings(additionalFiles, context.CancellationToken);
+        var loadSettingsMs = stepSw.ElapsedMilliseconds;
+        stepSw.Restart();
+
         var typesToRegister = DiscoverTypesForRegistration(compilation, typeDeclarations, settings, context.CancellationToken).ToList();
+        var discoverMs = stepSw.ElapsedMilliseconds;
+        stepSw.Restart();
 
         if (settings.SplitGeneratedFiles)
         {
@@ -67,6 +140,10 @@ public abstract class ServiceRegistrationGenerator : IIncrementalGenerator
             var source = GenerateServiceRegistrationCode(compilation.AssemblyName, typesToRegister, settings);
             context.AddSource($"{Generator.Name}_GeneratedServiceRegistration.g.cs", source);
         }
+        var generateMs = stepSw.ElapsedMilliseconds;
+        totalSw.Stop();
+
+        Log(context, $"[{Generator.Name}] Timing for {compilation.AssemblyName}: LoadSettings={loadSettingsMs}ms, DiscoverTypes={discoverMs}ms ({typesToRegister.Count} types), GenerateCode={generateMs}ms, Total={totalSw.ElapsedMilliseconds}ms");
     }
 
     private IEnumerable<INamedTypeSymbol> DiscoverTypesForRegistration(
@@ -302,7 +379,7 @@ public abstract class ServiceRegistrationGenerator : IIncrementalGenerator
                 serviceRegistrationEntity.RegisterAsInterfaces.AddRange(
                     type.AllInterfaces
                         .Where(SymbolBelongsToAllowedAssemblies)
-                        .Select(t => t.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
+                        .Select(GetTypeNameForRegistration)
                 );
             }
             else if (settings.RegisterAsDirectlyInheritedTypes)
@@ -310,7 +387,7 @@ public abstract class ServiceRegistrationGenerator : IIncrementalGenerator
                 serviceRegistrationEntity.RegisterAsInterfaces.AddRange(
                     type.Interfaces
                         .Where(SymbolBelongsToAllowedAssemblies)
-                        .Select(t => t.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
+                        .Select(GetTypeNameForRegistration)
                 );
             }
 
@@ -321,6 +398,33 @@ public abstract class ServiceRegistrationGenerator : IIncrementalGenerator
                 return settings.RegisterInterfacesOnlyFromThatAssemblies.Contains(assemblyName);
             }
         }
+    }
+
+    /// <summary>
+    /// Gets the type name for code generation, handling open generics properly.
+    /// For open generic types like IPipelineBehavior&lt;TRequest, TResponse&gt;,
+    /// returns the unbound generic format: global::Namespace.Type&lt;,&gt;
+    /// </summary>
+    private static string GetTypeNameForRegistration(INamedTypeSymbol type)
+    {
+        if (!type.IsGenericType)
+        {
+            return type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        }
+
+        // Check if all type arguments are type parameters (unbound generic)
+        var allTypeArgumentsAreTypeParameters = type.TypeArguments.All(t => t.TypeKind == TypeKind.TypeParameter);
+
+        if (allTypeArgumentsAreTypeParameters)
+        {
+            // This is an open generic like IPipelineBehavior<TRequest, TResponse>
+            // Convert to unbound generic format: global::Namespace.IPipelineBehavior<,>
+            var unboundType = type.ConstructUnboundGenericType();
+            return unboundType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        }
+
+        // Closed generic with concrete type arguments
+        return type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
     }
 
     private void GenerateForSelf(
@@ -387,7 +491,19 @@ public abstract class ServiceRegistrationGenerator : IIncrementalGenerator
             var factoryMethodName = factoryAttribute.ConstructorArguments[0].Value.ToString();
             if (!string.IsNullOrWhiteSpace(factoryMethodName))
             {
-                serviceRegistrationEntity.FactoryRegistration = new FactoryRegistrationEntity(factoryMethodName);
+                // Check for scoped parameter (second constructor argument)
+                var scoped = factoryAttribute.ConstructorArguments.Length > 1 &&
+                             factoryAttribute.ConstructorArguments[1].Value is bool scopedValue &&
+                             scopedValue;
+
+                serviceRegistrationEntity.FactoryRegistration = new FactoryRegistrationEntity(factoryMethodName, scoped);
+
+                // If factory is scoped, update the entity scope
+                if (scoped)
+                {
+                    serviceRegistrationEntity.Scope = Scope.Scoped;
+                }
+
                 serviceRegistrationEntity.RegisterAsInterfaces.Add(type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
                 return;
             }

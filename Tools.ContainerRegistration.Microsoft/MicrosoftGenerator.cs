@@ -17,6 +17,38 @@ public class MicrosoftGenerator : IGenerator
 
     public ServiceRegistration GetServiceRegistration() => new MicrosoftServiceRegistration();
 
+    /// <summary>
+    /// Checks if a type symbol represents an open generic type (has unbound type parameters).
+    /// </summary>
+    private static bool IsOpenGenericType(INamedTypeSymbol type)
+    {
+        return type.IsGenericType && type.TypeArguments.Any(t => t.TypeKind == TypeKind.TypeParameter);
+    }
+
+    /// <summary>
+    /// Gets the type name formatted for registration code generation.
+    /// For open generics, returns typeof(Namespace.Type&lt;,&gt;) format.
+    /// For closed generics and non-generics, returns the fully qualified name for use in generic method syntax.
+    /// </summary>
+    private static string GetTypeNameForRegistration(INamedTypeSymbol type)
+    {
+        if (!type.IsGenericType)
+        {
+            return type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        }
+
+        var allTypeArgumentsAreTypeParameters = type.TypeArguments.All(t => t.TypeKind == TypeKind.TypeParameter);
+
+        if (allTypeArgumentsAreTypeParameters)
+        {
+            // This is an open generic - convert to unbound format
+            var unboundType = type.ConstructUnboundGenericType();
+            return unboundType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        }
+
+        return type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+    }
+
     private string GenerateFactoryRegistration(string factoryMethodName, string interfaceTypeName, Scope scope)
     {
         if (scope == Scope.Singleton)
@@ -121,9 +153,25 @@ public class MicrosoftGenerator : IGenerator
         return $"builder.AddTransient<{interfaceTypeName}, {typeName}>();";
     }
 
+    // typeof() based registrations for open generic types
+    public string GenerateSingleInstanceTypeOf(string typeName, string interfaceTypeName)
+    {
+        return $"builder.AddSingleton(typeof({interfaceTypeName}), typeof({typeName}));";
+    }
+
+    public string GenerateScopedInstanceTypeOf(string typeName, string interfaceTypeName)
+    {
+        return $"builder.AddScoped(typeof({interfaceTypeName}), typeof({typeName}));";
+    }
+
+    public string GenerateTransientInstanceTypeOf(string typeName, string interfaceTypeName)
+    {
+        return $"builder.AddTransient(typeof({interfaceTypeName}), typeof({typeName}));";
+    }
+
     private string GenerateReuseAsSingleton(string typeName, string interfaceTypeName)
     {
-        return $"Tools.ContainerRegistration.Microsoft.Extensions.ServiceCollectionExtension.ReUseSingleton<{typeName}, {interfaceTypeName}>(builder);";
+        return $"global::Tools.ContainerRegistration.Microsoft.Extensions.ServiceCollectionExtension.ReUseSingleton<{typeName}, {interfaceTypeName}>(builder);";
     }
 
     private string GenerateForwardingRegistration(string typeName, string interfaceTypeName, Scope scope)
@@ -187,8 +235,15 @@ public class MicrosoftGenerator : IGenerator
     public GeneratedServiceRegistrationEntity Generate(ServiceRegistrationEntity serviceRegistrationEntity)
     {
         var registrationLine = new StringBuilder();
-        var typeName = serviceRegistrationEntity.NamedTypeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-        var shortTypeName = serviceRegistrationEntity.NamedTypeSymbol.Name;
+        var namedTypeSymbol = serviceRegistrationEntity.NamedTypeSymbol;
+        var isOpenGeneric = IsOpenGenericType(namedTypeSymbol);
+
+        // For open generics, use the unbound format (e.g., Type<,>)
+        // For closed generics and non-generics, use the full type name
+        var typeName = isOpenGeneric
+            ? GetTypeNameForRegistration(namedTypeSymbol)
+            : namedTypeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        var shortTypeName = namedTypeSymbol.Name;
 
         var registeredAsSingletonYet = false;
         var registerAsSingleton = serviceRegistrationEntity.Scope == Scope.Singleton;
@@ -245,17 +300,37 @@ public class MicrosoftGenerator : IGenerator
                 if (registerAsInterface == shortTypeName ||
                     registerAsInterface == typeName) continue;
 
-                if (serviceRegistrationEntity.Scope == Scope.Singleton)
+                // For open generics, use typeof() based registration
+                if (isOpenGeneric)
                 {
-                    registrationLine.AppendLine(GenerateReuseAsSingleton(typeName, registerAsInterface));
-                }
-                else if (serviceRegistrationEntity.Scope == Scope.Scoped)
-                {
-                    registrationLine.AppendLine(GenerateScopedInstance(typeName, registerAsInterface));
+                    if (serviceRegistrationEntity.Scope == Scope.Singleton)
+                    {
+                        registrationLine.AppendLine(GenerateSingleInstanceTypeOf(typeName, registerAsInterface));
+                    }
+                    else if (serviceRegistrationEntity.Scope == Scope.Scoped)
+                    {
+                        registrationLine.AppendLine(GenerateScopedInstanceTypeOf(typeName, registerAsInterface));
+                    }
+                    else
+                    {
+                        registrationLine.AppendLine(GenerateTransientInstanceTypeOf(typeName, registerAsInterface));
+                    }
                 }
                 else
                 {
-                    registrationLine.AppendLine(GenerateTransientInstance(typeName, registerAsInterface));
+                    // Standard generic method syntax for closed/non-generic types
+                    if (serviceRegistrationEntity.Scope == Scope.Singleton)
+                    {
+                        registrationLine.AppendLine(GenerateReuseAsSingleton(typeName, registerAsInterface));
+                    }
+                    else if (serviceRegistrationEntity.Scope == Scope.Scoped)
+                    {
+                        registrationLine.AppendLine(GenerateScopedInstance(typeName, registerAsInterface));
+                    }
+                    else
+                    {
+                        registrationLine.AppendLine(GenerateTransientInstance(typeName, registerAsInterface));
+                    }
                 }
             }
 

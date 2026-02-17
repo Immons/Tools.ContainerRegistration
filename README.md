@@ -200,31 +200,97 @@ LanguageBinderLocator.SetImplementation(instance_MobileLanguageBinder);
 
 ### InjectDependencies
 
-The `[InjectDependencies]` attribute marks a class that requires dependency injection via the `IInjector<T>` pattern. This is useful when a class needs dependencies that cannot be resolved through constructor injection (e.g., circular dependencies or late-bound dependencies).
+The `[InjectDependencies]` attribute marks a class that requires dependency injection via the `IInjector<T>` pattern. This is useful when a class needs dependencies that cannot be resolved through constructor injection (e.g., circular dependencies, late-bound dependencies, or property injection patterns).
 
-**Example:**
+**IMPORTANT:** This attribute should typically be placed on **base classes** that implement `IInjector<T>`. The source generator will then detect the attribute and generate proper injection code for all derived classes.
+
+**Interface definition:**
 
 ```csharp
 public interface IInjector<T>
 {
     void Inject(T dependency);
 }
+```
 
+**Example on a base class (recommended pattern):**
+
+```csharp
 [InjectDependencies]
-public class MyViewModel : IInjector<INavigationService>
+public abstract class GuardedAction : IGuardedAction, IInjector<IExceptionGuard>
 {
-    private INavigationService _navigationService;
+    public IExceptionGuard ExceptionGuard { get; protected set; }
 
-    public void Inject(INavigationService dependency)
+    void IInjector<IExceptionGuard>.Inject(IExceptionGuard service) => ExceptionGuard = service;
+
+    public async Task ExecuteGuarded()
     {
-        _navigationService = dependency;
+        await ExceptionGuard.Guard(this, async () => await Execute());
+    }
+
+    protected abstract Task Execute();
+}
+
+// Derived class - automatically gets IExceptionGuard injected
+public class MyAction : GuardedAction, IMyAction
+{
+    protected override Task Execute()
+    {
+        // ExceptionGuard is already available here
+        return Task.CompletedTask;
     }
 }
 ```
 
-The source generator will generate factory registration code that:
-1. Creates the instance using `ActivatorUtilities.CreateInstance`
-2. Calls the `Inject` method for each `IInjector<T>` interface implemented
+**Example with multiple injected dependencies:**
+
+```csharp
+[InjectDependencies]
+public abstract class AsyncGuardedCommandBuilder :
+    IAsyncGuardedCommandBuilder,
+    IInjector<IExceptionGuard>,
+    IInjector<IMessenger>
+{
+    public IExceptionGuard ExceptionGuard { get; protected set; }
+    public IMessenger Messenger { get; protected set; }
+
+    void IInjector<IExceptionGuard>.Inject(IExceptionGuard service) => ExceptionGuard = service;
+    void IInjector<IMessenger>.Inject(IMessenger service) => Messenger = service;
+}
+```
+
+**Generated code (Microsoft DI):**
+
+When a class (or its base class) has `[InjectDependencies]` and implements `IInjector<T>`, the generator creates a factory registration:
+
+```csharp
+builder.AddTransient<IMyAction>(provider => {
+    var instance = ActivatorUtilities.CreateInstance<MyAction>(provider);
+    ((IInjector<IExceptionGuard>)instance).Inject(provider.GetRequiredService<IExceptionGuard>());
+    return instance;
+});
+builder.AddTransient<MyAction>(provider => {
+    var instance = ActivatorUtilities.CreateInstance<MyAction>(provider);
+    ((IInjector<IExceptionGuard>)instance).Inject(provider.GetRequiredService<IExceptionGuard>());
+    return instance;
+});
+```
+
+**Without `[InjectDependencies]`:**
+
+If the attribute is missing, the generator creates simple registrations without injection:
+
+```csharp
+// This will cause NullReferenceException when ExceptionGuard is used!
+builder.AddTransient<IMyAction, MyAction>();
+builder.AddTransient<MyAction>();
+```
+
+**Key points:**
+- Place `[InjectDependencies]` on base classes that implement `IInjector<T>`
+- The generator scans the inheritance chain to detect the attribute
+- All `IInjector<T>` interfaces are detected and their `Inject` methods are called
+- Dependencies must be registered in the container before use
 
 ---
 
