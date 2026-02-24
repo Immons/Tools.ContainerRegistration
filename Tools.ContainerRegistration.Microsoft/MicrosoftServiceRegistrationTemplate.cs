@@ -15,9 +15,8 @@ public static class MicrosoftServiceRegistrationTemplate
         MicrosoftGenerator generator,
         MicrosoftServiceRegistration microsoftServiceRegistration)
     {
-        var stringUsings = microsoftServiceRegistration.Usings
-            .Select(u => $"using {u};")
-            .Aggregate((s, s1) => $"{s}\n{s1}");
+        var stringUsings = string.Join("\n", microsoftServiceRegistration.Usings
+            .Select(u => $"using {u};"));
 
         var generatedEntities = microsoftServiceRegistration.Entities
             .Select(generator.Generate)
@@ -25,11 +24,14 @@ public static class MicrosoftServiceRegistrationTemplate
             .ToList();
 
         // Normalize multi-line entries to have proper indentation
-        var servicesBlock = generatedEntities
+        var serviceLines = generatedEntities
             .Select(e => e.Entity)
             .Where(e => !string.IsNullOrWhiteSpace(e))
             .Select(e => e.Replace("\n", NewLineWithIndent))
-            .Aggregate((s, s1) => $"{s}\n{MethodBodyIndent}{s1}");
+            .ToList();
+        var servicesBlock = serviceLines.Any()
+            ? serviceLines.Aggregate((s, s1) => $"{s}\n{MethodBodyIndent}{s1}")
+            : "// No services to register";
 
         var autoActivateEntries = generatedEntities
             .Select(e => e.AutoActivate)
@@ -98,10 +100,9 @@ public static class {microsoftServiceRegistration.ContainerName}_GeneratedServic
                     groupUsings.Add(ns);
             }
 
-            var stringUsings = groupUsings
+            var stringUsings = string.Join("\n", groupUsings
                 .OrderBy(u => u)
-                .Select(u => $"using {u};")
-                .Aggregate((s, s1) => $"{s}\n{s1}");
+                .Select(u => $"using {u};"));
 
             var servicesBlockList = generatedEntities
                 .Select(e => e.Entity)
@@ -148,10 +149,13 @@ public static partial class {className}
         // Generate the main aggregator file
         var mainUsings = $"using {generator.Namespace};";
 
-        var groupMethodCalls = groupedEntities.Keys
+        var groupMethodCallsList = groupedEntities.Keys
             .OrderBy(g => g)
             .Select(g => $"Register{g}(builder);")
-            .Aggregate((s, s1) => $"{s}\n{MethodBodyIndent}{s1}");
+            .ToList();
+        var groupMethodCalls = groupMethodCallsList.Any()
+            ? groupMethodCallsList.Aggregate((s, s1) => $"{s}\n{MethodBodyIndent}{s1}")
+            : "// No groups to register";
 
         var fireAfterContainerBuilt = allAutoActivateEntries.Any()
             ? allAutoActivateEntries.Aggregate((s, s1) => $"{s}\n{MethodBodyIndent}{s1}")
