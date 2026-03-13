@@ -7,7 +7,7 @@
     <IsRoslynComponent>true</IsRoslynComponent>
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>0.1.7</Version>
+    <Version>0.1.8</Version>
     <Title>Tools.ContainerRegistration.Common</Title>
     <Authors>Artur Malendowicz "Immons"</Authors>
     <Description>Common project serving as base class for container generators</Description>
