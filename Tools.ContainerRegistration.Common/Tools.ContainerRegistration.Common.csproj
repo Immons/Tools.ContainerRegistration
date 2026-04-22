@@ -7,7 +7,7 @@
     <IsRoslynComponent>true</IsRoslynComponent>
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>0.2.0</Version>
+    <Version>0.2.1</Version>
     <Title>Tools.ContainerRegistration.Common</Title>
     <Authors>Artur Malendowicz "Immons"</Authors>
     <Description>Common project serving as base class for container generators</Description>
@@ -15,6 +15,8 @@
     <PackageProjectUrl>https://github.com/Immons/Tools.ContainerRegistration</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Immons/Tools.ContainerRegistration</RepositoryUrl>
     <RepositoryType>Git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
 </PropertyGroup>
 
 <ItemGroup>
@@ -25,6 +27,7 @@
 
     <ItemGroup>
         <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+        <None Include="..\README.md" Pack="true" PackagePath="\" />
     </ItemGroup>
 
     <Target Name="CopyNuGetPackage" AfterTargets="Pack">
